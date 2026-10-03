@@ -1,0 +1,1 @@
+"""Ninja Collector Source Package."""
