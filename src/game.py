@@ -18,19 +18,19 @@ class Game:
         self.width = config.DEFAULT_WIDTH
         self.height = config.DEFAULT_HEIGHT
         self.is_resizable = True
-        self.window = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+        self.window : pygame.Surface = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
         pygame.display.set_caption(config.CAPTION)
 
         # Asset Manager
         self.assets = AssetManager()
 
         # Set Window Icon
-        icon_surface = self.assets.get_image(config.ICON_FILE)
+        icon_surface = self.assets.get_image(config.ICON_FILE, size=None)
         pygame.display.set_icon(icon_surface)
 
         # Load and scale background
-        self.bg_raw = self.assets.get_image(config.BG_IMAGE_FILE)
-        self.bg_image = pygame.transform.scale(self.bg_raw, (self.width, self.height))
+        self.bg_raw: pygame.Surface = self.assets.get_image(config.BG_IMAGE_FILE, size=None)
+        self.bg_image: pygame.Surface = pygame.transform.scale(self.bg_raw, (self.width, self.height))
 
         # Timing
         self.clock = pygame.time.Clock()
@@ -43,7 +43,7 @@ class Game:
         """Instantiates all player and world sprite entities."""
         # Player
         player_frames = self.assets.get_animation(config.PLAYER_FRAME_NAMES, size=config.PLAYER_SIZE)
-        self.player = player_module.Player(
+        self.player: player_module.Player = player_module.Player(
             frames=player_frames,
             x=self.width // 2 - config.PLAYER_SIZE[0] // 2,
             y=self.height - config.PLAYER_SIZE[1] - config.PLAYER_BOTTOM_OFFSET,
@@ -54,11 +54,11 @@ class Game:
 
         # Animated Coins with smooth proportional scaling
         coin_frames = self.assets.get_proportional_animation(config.COIN_FRAME_NAMES, target_box=config.COIN_SIZE)
-        self.coins_group = pygame.sprite.Group()
-        self.all_sprites = pygame.sprite.Group()
+        self.coins_group: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
+        self.all_sprites: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
 
         # Spawn initial coins staggered across screen
-        for i in range(config.COIN_COUNT):
+        for _ in range(config.COIN_COUNT):
             spawn_x = random.randint(30, max(30, self.width - config.COIN_SIZE[0] - 30))
             spawn_y = -random.randint(50, 400)
             coin = coin_module.CoinSprite(coin_frames, spawn_x, spawn_y, speed=random.uniform(2.5, 4.0))
@@ -74,7 +74,7 @@ class Game:
             self.assets.clear_cache()
 
             # Refresh background
-            self.bg_raw = self.assets.get_image(config.BG_IMAGE_FILE)
+            self.bg_raw = self.assets.get_image(config.BG_IMAGE_FILE, size=None)
             self.bg_image = pygame.transform.scale(self.bg_raw, (self.width, self.height))
 
             # Re-initialize entities with fresh values

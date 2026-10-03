@@ -1,5 +1,6 @@
-import os
 from pathlib import Path
+from typing import cast
+
 import pygame
 from src.config import ASSETS_DIR
 
@@ -7,15 +8,15 @@ from src.config import ASSETS_DIR
 class AssetManager:
     """Manages loading and caching of game assets (surfaces, animations, sounds)."""
 
-    def __init__(self, base_dir=ASSETS_DIR):
+    def __init__(self, base_dir : Path | str = ASSETS_DIR):
         self.base_dir = Path(base_dir)
-        self._image_cache = {}
+        self._image_cache: dict[tuple[object, ...], pygame.Surface | list[pygame.Surface]] = {}
 
-    def get_image(self, filename, size=None, smooth=False):
+    def get_image(self, filename : str, size:tuple[int,int] |None, smooth :bool =False) -> pygame.Surface:
         """Loads and caches an image, optionally scaled to `size` (width, height)."""
         key = (str(filename), size, smooth)
         if key in self._image_cache:
-            return self._image_cache[key]
+            return cast(pygame.Surface, self._image_cache[key])
 
         filepath = self.base_dir / filename
         if not filepath.exists():
@@ -32,21 +33,21 @@ class AssetManager:
         self._image_cache[key] = surface
         return surface
 
-    def get_animation(self, filenames, size=None, smooth=False):
+    def get_animation(self, filenames: list[str], size: tuple[int, int] | None = None, smooth: bool = False) -> list[pygame.Surface]:
         """Loads a sequence of image surfaces for animations."""
         return [self.get_image(name, size, smooth=smooth) for name in filenames]
 
-    def get_proportional_animation(self, filenames, target_box=(50, 50)):
+    def get_proportional_animation(self, filenames: list[str], target_box: tuple[int, int] = (50, 50)) -> list[pygame.Surface]:
         """
         Loads animation frames scaled proportionally and centered on a uniform transparent canvas.
         Maintains correct 3D aspect ratio during rotations (e.g. coin turning edge-on).
         """
         key = ("prop_anim", tuple(filenames), target_box)
         if key in self._image_cache:
-            return self._image_cache[key]
+            return cast(list[pygame.Surface], self._image_cache[key])
 
         box_w, box_h = target_box
-        surfaces = []
+        surfaces: list[pygame.Surface] = []
 
         for name in filenames:
             filepath = self.base_dir / name

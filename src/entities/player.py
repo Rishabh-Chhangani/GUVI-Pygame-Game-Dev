@@ -7,13 +7,13 @@ class Player(pygame.sprite.Sprite):
 
     def __init__(
         self,
-        frames,
-        x,
-        y=0,
-        size=PLAYER_SIZE,
-        speed=PLAYER_SPEED,
-        bottom_offset=PLAYER_BOTTOM_OFFSET,
-        animation_delay=PLAYER_ANIMATION_DELAY
+        frames : list[pygame.Surface],
+        x : int,
+        y : int = 0,
+        size : tuple[int, int] = PLAYER_SIZE,
+        speed : int = PLAYER_SPEED,
+        bottom_offset : int = PLAYER_BOTTOM_OFFSET,
+        animation_delay : int = PLAYER_ANIMATION_DELAY
     ):
         super().__init__()
         self.frames = frames
@@ -28,8 +28,9 @@ class Player(pygame.sprite.Sprite):
         self.image = self.frames[self.current_frame]
         self.rect = pygame.Rect(x, y, size[0], size[1])
 
-    def handle_input(self, screen_width, screen_height):
+    def handle_input(self, screen_width : int, screen_height : int):
         """Processes keyboard input for horizontal movement and locks vertical position."""
+        assert self.rect is not None
         keys = pygame.key.get_pressed()
 
         # Horizontal movement only (Arrow keys & A/D)
@@ -41,6 +42,7 @@ class Player(pygame.sprite.Sprite):
             self.facing_right = True
 
         # Horizontal boundary constraints
+        assert self.rect is not None
         if self.rect.left < 0:
             self.rect.left = 0
         if self.rect.right > screen_width:
@@ -49,7 +51,7 @@ class Player(pygame.sprite.Sprite):
         # Fixed vertical axis (anchored 20px from bottom)
         self.rect.bottom = screen_height - self.bottom_offset
 
-    def update(self, screen_width=800, screen_height=600):
+    def update(self, screen_width : int = 800, screen_height : int = 600):
         """Updates player horizontal position, animation frame, and orientation."""
         self.handle_input(screen_width, screen_height)
 
@@ -65,7 +67,9 @@ class Player(pygame.sprite.Sprite):
         else:
             self.image = current_img
 
-    def draw(self, surface):
+    def draw(self, surface  : pygame.Surface) -> None:
         """Draws player to the target surface."""
+        assert self.rect is not None
+        assert self.image is not None
         surface.blit(self.image, self.rect)
 
