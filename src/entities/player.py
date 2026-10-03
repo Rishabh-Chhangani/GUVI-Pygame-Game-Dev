@@ -13,10 +13,15 @@ class Player(pygame.sprite.Sprite):
         size : tuple[int, int] = PLAYER_SIZE,
         speed : int = PLAYER_SPEED,
         bottom_offset : int = PLAYER_BOTTOM_OFFSET,
-        animation_delay : int = PLAYER_ANIMATION_DELAY
+        animation_delay : int = PLAYER_ANIMATION_DELAY,
+        running_frames: list[pygame.Surface] | None = None,
+        catch_frames: list[pygame.Surface] | None = None,
     ):
         super().__init__()
         self.frames = frames
+        self.running_frames = running_frames if running_frames is not None else frames
+        self.catch_frames = catch_frames if catch_frames is not None else []
+        self.current_animation = self.frames
         self.current_frame = 0
         self.animation_delay = animation_delay
         self.last_update = pygame.time.get_ticks()
@@ -24,13 +29,27 @@ class Player(pygame.sprite.Sprite):
         self.speed = speed
         self.bottom_offset = bottom_offset
         self.facing_right = True
+        self.is_moving = False
+        self.is_catching = False
 
         self.image = self.frames[self.current_frame]
         self.rect = pygame.Rect(x, y, size[0], size[1])
 
+    def start_catch(self) -> None:
+        """Starts the one-shot catch animation when frames are available."""
+        if not self.catch_frames:
+            return
+
+        self.is_catching = True
+        self.current_frame = 0
+        self.last_update = pygame.time.get_ticks()
+        current_img = self.catch_frames[self.current_frame]
+        self.image = pygame.transform.flip(current_img, True, False) if not self.facing_right else current_img
+
     def handle_input(self, screen_width : int, screen_height : int):
         """Processes keyboard input for horizontal movement and locks vertical position."""
         assert self.rect is not None
+        start_x = self.rect.x
         keys = pygame.key.get_pressed()
 
         # Horizontal movement only (Arrow keys & A/D)
@@ -48,6 +67,8 @@ class Player(pygame.sprite.Sprite):
         if self.rect.right > screen_width:
             self.rect.right = screen_width
 
+        self.is_moving = self.rect.x != start_x
+
         # Fixed vertical axis (anchored 20px from bottom)
         self.rect.bottom = screen_height - self.bottom_offset
 
@@ -57,11 +78,33 @@ class Player(pygame.sprite.Sprite):
 
         # Update animation frame
         now = pygame.time.get_ticks()
-        if now - self.last_update > self.animation_delay:
-            self.current_frame = (self.current_frame + 1) % len(self.frames)
+        if self.is_catching:
+            if now - self.last_update > self.animation_delay:
+                self.current_frame += 1
+                self.last_update = now
+                if self.current_frame >= len(self.catch_frames):
+                    self.is_catching = False
+                    self.current_frame = 0
+
+            if self.is_catching:
+                current_img = self.catch_frames[self.current_frame]
+                if not self.facing_right:
+                    self.image = pygame.transform.flip(current_img, True, False)
+                else:
+                    self.image = current_img
+                return
+
+        animation = self.running_frames if self.is_moving else self.frames
+        if animation is not self.current_animation:
+            self.current_animation = animation
+            self.current_frame = 0
             self.last_update = now
 
-        current_img = self.frames[self.current_frame]
+        if now - self.last_update > self.animation_delay:
+            self.current_frame = (self.current_frame + 1) % len(self.current_animation)
+            self.last_update = now
+
+        current_img = self.current_animation[self.current_frame]
         if not self.facing_right:
             self.image = pygame.transform.flip(current_img, True, False)
         else:
@@ -72,4 +115,3 @@ class Player(pygame.sprite.Sprite):
         assert self.rect is not None
         assert self.image is not None
         surface.blit(self.image, self.rect)
-
