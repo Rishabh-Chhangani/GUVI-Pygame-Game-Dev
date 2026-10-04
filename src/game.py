@@ -43,6 +43,8 @@ class Game:
         self.coin_drop_count = 0
         self.bomb_drop_count = 0
         self.star_drop_count = 0
+        self.coins_since_bomb = 0
+        self.coins_since_star = 0
         self.score_font = pygame.font.Font(config.FONT_FILE, config.SCORE_FONT_SIZE)
         self.game_over_font = pygame.font.Font(config.FONT_FILE, config.GAME_OVER_FONT_SIZE)
         self.menu_title_font = pygame.font.Font(config.FONT_FILE, config.MENU_TITLE_FONT_SIZE)
@@ -122,12 +124,16 @@ class Game:
         self._register_coin_drop()
 
     def _register_coin_drop(self) -> None:
-        """Tracks each initial spawn or respawn and triggers milestone hazards."""
+        """Tracks coin drops and triggers hazards at repeating coin intervals."""
         self.coin_drop_count += 1
+        self.coins_since_bomb += 1
+        self.coins_since_star += 1
 
-        if self.coin_drop_count % config.COINS_PER_BOMB == 0:
+        if self.coins_since_bomb >= config.COINS_PER_BOMB:
+            self.coins_since_bomb = 0
             self._spawn_bomb()
-        if self.coin_drop_count % config.COINS_PER_STAR == 0:
+        if self.coins_since_star >= config.COINS_PER_STAR:
+            self.coins_since_star = 0
             self._spawn_star()
 
     def _spawn_bomb(self) -> None:
@@ -228,6 +234,8 @@ class Game:
         self.coin_drop_count = 0
         self.bomb_drop_count = 0
         self.star_drop_count = 0
+        self.coins_since_bomb = 0
+        self.coins_since_star = 0
         self.state = "PLAYING"
         self._init_entities()
 
@@ -237,6 +245,8 @@ class Game:
         self.coin_drop_count = 0
         self.bomb_drop_count = 0
         self.star_drop_count = 0
+        self.coins_since_bomb = 0
+        self.coins_since_star = 0
         self.state = "PLAYING"
         self._init_entities()
 
@@ -246,6 +256,8 @@ class Game:
         self.coin_drop_count = 0
         self.bomb_drop_count = 0
         self.star_drop_count = 0
+        self.coins_since_bomb = 0
+        self.coins_since_star = 0
         self.state = "MENU"
         self._init_entities()
 
