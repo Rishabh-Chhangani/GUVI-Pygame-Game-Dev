@@ -4,6 +4,7 @@
 
 # Python bytecode / cache
 __pycache__/
+src/entities/__pycache__/
 *.py[cod]
 *$py.class
 
