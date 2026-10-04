@@ -5,6 +5,7 @@ import src.config as config
 from src.asset_manager import AssetManager
 import src.entities.player as player_module
 import src.entities.coin as coin_module
+import src.entities.bomb as bomb_module
 
 
 class Game:
@@ -40,10 +41,10 @@ class Game:
         self.score = 0
         self.missed_coins = 0
         self.game_over = False
-        self.score_font = pygame.font.Font(None, config.SCORE_FONT_SIZE)
-        self.game_over_font = pygame.font.Font(None, config.GAME_OVER_FONT_SIZE)
-        self.menu_title_font = pygame.font.Font(None, config.MENU_TITLE_FONT_SIZE)
-        self.menu_button_font = pygame.font.Font(None, config.MENU_BUTTON_FONT_SIZE)
+        self.score_font = pygame.font.Font(config.FONT_FILE, config.SCORE_FONT_SIZE)
+        self.game_over_font = pygame.font.Font(config.FONT_FILE, config.GAME_OVER_FONT_SIZE)
+        self.menu_title_font = pygame.font.Font(config.FONT_FILE, config.MENU_TITLE_FONT_SIZE)
+        self.menu_button_font = pygame.font.Font(config.FONT_FILE, config.MENU_BUTTON_FONT_SIZE)
 
         # Menu UI
         self.play_button_rect = pygame.Rect(0, 0, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT)
@@ -94,6 +95,16 @@ class Game:
         coin_frames = self.assets.get_proportional_animation(config.COIN_FRAME_NAMES, target_box=config.COIN_SIZE)
         self.coins_group: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
         self.all_sprites: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
+        bomb_image = self.assets.get_image(
+            config.BOMB_IMAGE_FILE,
+            size=config.BOMB_SIZE,
+            smooth=True,
+        )
+        self.bomb: bomb_module.BombSprite = bomb_module.BombSprite(
+            image=bomb_image,
+            x=max(0, self.width - config.BOMB_SIZE[0] - 24),
+            y=24,
+        )
 
         # Spawn initial coins staggered across screen
         for _ in range(config.COIN_COUNT):
@@ -365,6 +376,7 @@ class Game:
 
         self.window.blit(self.bg_image, (0, 0))
         self.all_sprites.draw(self.window)
+        self.window.blit(self.bomb.image, self.bomb.rect)
         self.player.draw(self.window)
 
         score_surface = self.score_font.render(f"Score: {self.score}", True, config.HUD_COLOR)

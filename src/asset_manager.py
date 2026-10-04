@@ -11,6 +11,7 @@ class AssetManager:
     def __init__(self, base_dir : Path | str = ASSETS_DIR):
         self.base_dir = Path(base_dir)
         self._image_cache: dict[tuple[object, ...], pygame.Surface | list[pygame.Surface]] = {}
+        self._sound_cache: dict[str, pygame.mixer.Sound] = {}
 
     def get_image(self, filename : str, size:tuple[int,int] |None, smooth :bool =False) -> pygame.Surface:
         """Loads and caches an image, optionally scaled to `size` (width, height)."""
@@ -75,6 +76,18 @@ class AssetManager:
         self._image_cache[key] = surfaces
         return surfaces
 
+    def get_sound(self, filename: str) -> pygame.mixer.Sound:
+        """Loads and caches a sound effect from the asset directory."""
+        if filename not in self._sound_cache:
+            filepath = self.base_dir / filename
+            if not filepath.exists():
+                raise FileNotFoundError(f"Asset not found: {filepath}")
+
+            self._sound_cache[filename] = pygame.mixer.Sound(str(filepath))
+
+        return self._sound_cache[filename]
+
     def clear_cache(self):
         """Clears cached assets."""
         self._image_cache.clear()
+        self._sound_cache.clear()

@@ -39,9 +39,14 @@ COIN_ANIMATION_DELAY = 125  # milliseconds for smooth natural rotation
 COIN_COUNT = 4  # Number of concurrent falling coins
 MAX_MISSED_COINS = 5
 
+# Bomb Settings
+BOMB_IMAGE_FILE = "bomb.png"
+BOMB_SIZE = (32, 32)
+
 # HUD Settings
 SCORE_FONT_SIZE = 28
 GAME_OVER_FONT_SIZE = 64
+FONT_FILE: str | None = None
 HUD_COLOR = (255, 255, 255)
 GAME_OVER_COLOR = (255, 70, 70)
 SCORE_POSITION = (20, 20)
