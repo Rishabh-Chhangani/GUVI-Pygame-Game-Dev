@@ -25,7 +25,7 @@ class CoinSprite(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.pos_y = float(self.rect.y)
         self.speed = speed
-        self.missed_this_update = False
+        self.respawned_this_update = False
 
     def reset(self, screen_width: int = 800) -> None:
         """Resets the coin above the screen at a randomized horizontal position and speed."""
@@ -40,7 +40,7 @@ class CoinSprite(pygame.sprite.Sprite):
     def update(self, screen_width: int = 800, screen_height: int = 600) -> None:
         """Updates downward falling kinematics and frame animation."""
         assert self.rect is not None
-        self.missed_this_update = False
+        self.respawned_this_update = False
         # Kinematics
         self.pos_y += self.speed
         self.rect.y = int(self.pos_y)
@@ -55,4 +55,4 @@ class CoinSprite(pygame.sprite.Sprite):
         # Screen loop
         if self.rect.top > screen_height:
             self.reset(screen_width)
-            self.missed_this_update = True
+            self.respawned_this_update = True

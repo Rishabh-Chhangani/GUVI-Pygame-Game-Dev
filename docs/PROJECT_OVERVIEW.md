@@ -3,9 +3,9 @@
 
 ## 1. Project Overview
 
-Ninja Collector is a small single-window pygame project in which the player moves horizontally at the bottom of the screen and collects falling coin sprites while avoiding missed drops. The active runtime is driven by a central `Game` controller that owns the game loop, state transitions, rendering, and the player/coin entity lifecycle.
+Ninja Collector is a small single-window pygame project in which the player moves horizontally at the bottom of the screen, collects falling coins and rare stars, and avoids falling bombs. The active runtime is driven by a central `Game` controller that owns the game loop, state transitions, rendering, and entity lifecycle.
 
-The current gameplay loop is structured as: input/events -> update -> render -> repeat. The program starts in the main menu, transitions into gameplay when PLAY is selected, pauses using a pause menu, and enters `GAME_OVER` when the configured miss threshold is reached.
+The current gameplay loop is structured as: input/events -> update -> render -> repeat. The program starts in the main menu, transitions into gameplay when PLAY is selected, pauses using a pause menu, and enters `GAME_OVER` when the player's health reaches zero after bomb impacts.
 
 ## 2. Technology Stack
 
@@ -33,6 +33,7 @@ Ninja Collector/
 │   ├── config.py
 │   ├── entities/
 │   │   ├── coin.py
+│   │   ├── bomb.py
 │   │   ├── player.py
 │   │   └── star.py
 │   └── game.py
@@ -55,9 +56,10 @@ Important modules:
 - `src/config.py`: shared configuration for window size, asset paths, animation frame names, game constants, and UI settings.
 - `src/asset_manager.py`: loads images and animation sequences, caches resources, and supports proportional scaling for collectibles.
 - `src/entities/player.py`: player sprite with movement, animation state selection, and bottom anchoring.
-- `src/entities/coin.py`: collectible sprite with falling movement, frame animation, respawn behavior, and missed-coin tracking.
-- `src/entities/star.py`: an additional sprite entity that exists in the codebase but is not currently connected to the active gameplay loop.
-- `assets/`: image resources used for the background, player animations, coin frames, and catch/run assets.
+- `src/entities/coin.py`: collectible sprite with falling movement, frame animation, and respawn behavior.
+- `src/entities/bomb.py`: falling bomb hazard sprite; Game handles its collision damage.
+- `src/entities/star.py`: falling rare collectible sprite; Game handles its score value.
+- `assets/`: image resources used for the background, player animations, coins, bomb, and star.
 
 ## 4. Architecture
 
@@ -67,7 +69,8 @@ The current implementation is a single-controller Pygame game with explicit stat
 Game
 ├── Game State (MENU / PLAYING / PAUSED / OPTIONS / GAME_OVER)
 ├── Player
-├── Collectibles (CoinSprite)
+├── Collectibles (CoinSprite, StarSprite)
+├── Hazard (BombSprite)
 ├── Asset Manager
 ├── HUD / Menu UI
 ├── Configuration
@@ -89,11 +92,11 @@ Game
 
 ### Update phase
 - The update loop only processes gameplay when the state is `PLAYING`.
-- Coins are moved and their miss condition is evaluated.
+- Coins, bombs, and stars are moved; coin respawns are counted for hazard drop scheduling.
 - The player position is updated and animated.
 - Collision detection is performed with `pygame.sprite.spritecollide()`.
 - Score changes and catch animation start when a coin is collected.
-- When the missed threshold is reached the game transitions into `GAME_OVER`.
+- Bomb collisions reduce player health; zero health transitions into `GAME_OVER`.
 
 ### Rendering phase
 - Background is drawn first, then world sprites, then player.
@@ -102,8 +105,9 @@ Game
 
 ### Entity responsibilities
 - `Player` handles player movement, horizontal boundaries, current direction, and animation state transitions.
-- `CoinSprite` handles coin falling, animation, respawn, and the per-frame `missed_this_update` flag used by the Game controller.
-- `StarSprite` exists as an earlier sprite pattern but is not part of the active player/coin gameplay loop.
+- `CoinSprite` handles coin falling, animation, and respawn.
+- `BombSprite` handles bomb falling and off-screen respawn; `Game` handles collision damage.
+- `StarSprite` handles star falling and off-screen respawn; `Game` handles collection scoring.
 
 ### Asset loading
 - `AssetManager` loads `Surface` data from the `assets/` directory and caches them by file name and size.
@@ -133,7 +137,7 @@ The project currently implements the following states:
 - `PLAYING`
   - Represents active coin collection gameplay.
   - Entered from `MENU` after PLAY or from `PAUSED` after RESUME.
-  - Leaves when ESC pauses the game, when the player has reached the miss threshold, or when the game is restarted.
+  - Leaves when ESC pauses the game, when player health reaches zero, or when the game is restarted.
 
 - `PAUSED`
   - Freezes the gameplay update loop while keeping the current session state intact.
@@ -147,7 +151,7 @@ The project currently implements the following states:
 
 - `GAME_OVER`
   - Displays the game-over screen and prevents gameplay updates.
-  - Entered when `missed_coins >= MAX_MISSED_COINS`.
+  - Entered when player health reaches zero after bomb collisions.
   - Leaves through RESTART or RETURN TO MAIN MENU.
 
 ### State transition diagram
@@ -159,7 +163,7 @@ MENU
 
 PLAYING
   ├── ESC ──> PAUSED
-  └── 5 misses ──> GAME_OVER
+  └── health reaches 0 from bomb hits ──> GAME_OVER
 
 PAUSED
   ├── RESUME ──> PLAYING
@@ -186,25 +190,27 @@ GAME_OVER
 
 ### Collectibles
 - Coin entities are created in `Game._init_entities()` using `AssetManager.get_proportional_animation()`.
-- Each coin has a downward speed and is respawned at a new random x-position when it falls beyond the screen or is collected.
+- Two coins are active concurrently. Each coin has a downward speed and is respawned at a randomized position above the screen when it passes the bottom or is collected.
+- `Game` counts initial coin spawns and respawns. Every 7th coin drop spawns one bomb; every 10th spawns one rare star.
 - Coin collision is handled via `pygame.sprite.spritecollide(self.player, self.coins_group, False)`.
 - Collection increases score and triggers the catch animation.
-- Miss detection is handled by `CoinSprite.update()` setting `missed_this_update`, which is then processed by `Game.update()`.
+- Passing the bottom only respawns the coin and advances the drop counter; it does not reduce health or trigger Game Over.
+- Bombs fall from randomized positions above the play area. A bomb collision deals 25 damage and respawns that bomb.
+- Stars fall from randomized positions above the play area. Collecting a star adds 10 points and respawns it.
 
 ### Score
 - `Game.score` starts at `0`.
 - Each collected coin increments score by 1.
 - The score is rendered in the HUD with `pygame.font.Font` in `Game.draw()`.
 
-### Tries / Misses
-- The project uses `self.missed_coins` as the current miss counter and `MAX_MISSED_COINS = 5` as the terminal threshold.
-- Each missed coin increments the counter by 1.
-- Remaining tries are derived as `max(0, MAX_MISSED_COINS - missed_coins)`.
-- The HUD renders the current remaining tries as `TRIES: X` during gameplay.
-- When the counter reaches 5, the game enters `GAME_OVER`.
+### Health
+- `Player.health` starts at `PLAYER_MAX_HEALTH = 100`.
+- Each bomb impact removes `BOMB_DAMAGE = 25` health; health is clamped at zero.
+- Game Over is triggered when health reaches zero. Missed coins do not affect health or game state.
+- Health data is implemented on the Player. The HUD displays `HP: X` and a bar filled proportionally to current health.
 
 ### Game Over
-- The current game-over condition is: `self.missed_coins >= config.MAX_MISSED_COINS`.
+- The current game-over condition is: `self.player.health <= 0` after bomb damage.
 - When triggered, the game stops gameplay updates and renders the `GAME OVER` text plus action buttons.
 - Current actions are:
   - RESTART: fresh session, direct return to `PLAYING`
@@ -215,7 +221,7 @@ GAME_OVER
 The UI exists inside the same `Game` class and does not use a separate application or second event loop.
 
 - Main Menu: title + PLAY + QUIT; hover highlighting is supported via `pygame.Rect` collisions.
-- HUD: score text and tries text render in the gameplay view.
+- HUD: score and current HP text render in the gameplay view alongside a health bar that drains in proportion to damage.
 - Pause Menu: RESUME, RESTART, and OPTIONS actions; drawn as overlayed menu buttons.
 - Options screen: placeholder `OPTIONS` title and a BACK button.
 - Game Over screen: `GAME OVER` text plus RESTART and RETURN TO MAIN MENU buttons.
@@ -254,8 +260,9 @@ Important values currently present:
 - Window: `DEFAULT_WIDTH`, `DEFAULT_HEIGHT`
 - Timing: `FPS`, `PLAYER_ANIMATION_DELAY`, `COIN_ANIMATION_DELAY`
 - Player: `PLAYER_SIZE`, `PLAYER_SPEED`, `PLAYER_BOTTOM_OFFSET`
-- Coin: `COIN_SIZE`, `COIN_COUNT`, `MAX_MISSED_COINS`
-- Assets: `ASSETS_DIR`, `ICON_FILE`, `BG_IMAGE_FILE`, player and coin frame names
+- Coin: `COIN_SIZE`, `COIN_COUNT`, `COINS_PER_BOMB`, `COINS_PER_STAR`
+- Player health and hazard values: `PLAYER_MAX_HEALTH`, `BOMB_DAMAGE`, `STAR_VALUE`
+- Assets: `ASSETS_DIR`, `ICON_FILE`, `BG_IMAGE_FILE`, player/coin frames, `BOMB_IMAGE_FILE`, `STAR_IMAGE_FILE`
 - HUD/UI: `SCORE_FONT_SIZE`, `GAME_OVER_FONT_SIZE`, `HUD_COLOR`, `GAME_OVER_COLOR`, menu button colors and sizes
 
 ## 11. Design Patterns / Design Principles
@@ -267,7 +274,7 @@ Important values currently present:
 
 ### Sprite-based entity architecture
 - Used in `pygame.sprite.Sprite` and `pygame.sprite.Group` for the player and collectibles.
-- Classes involved: `Player`, `CoinSprite`, `StarSprite`, `Game.coins_group`, `Game.all_sprites`.
+- Classes involved: `Player`, `CoinSprite`, `BombSprite`, `StarSprite`, and their Game-owned sprite groups.
 - Why it fits: entity behavior is localized to sprite objects while the game controller manages world state.
 
 ### Manager pattern
@@ -330,8 +337,10 @@ Included Python standard-library modules:
 - [x] Coin collection
 - [x] Catch animation
 - [x] Score
-- [x] Miss detection
-- [x] Five tries
+- [x] Coin spawn tracking
+- [x] Bomb drops and damage
+- [x] Rare star drops and +10 score
+- [x] Player health model
 - [x] Game Over
 - [x] Main Menu
 - [x] Pause Menu
@@ -344,7 +353,8 @@ Included Python standard-library modules:
 - No persistent high-score storage
 - No audio or music system
 - No difficulty progression or level scaling
-- No power-ups, obstacles, or multiple collectible types
+- No bomb blast animation or damage/invulnerability effects
+- No power-ups or additional collectible types beyond coins and the rare star
 - No advanced menu art or background image support in the menu system yet
 - No real settings implementation beyond a placeholder options screen
 - No formal automated test suite currently present in the repository

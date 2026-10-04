@@ -1,5 +1,11 @@
 import pygame
-from src.config import PLAYER_SPEED, PLAYER_ANIMATION_DELAY, PLAYER_SIZE, PLAYER_BOTTOM_OFFSET
+from src.config import (
+    PLAYER_SPEED,
+    PLAYER_ANIMATION_DELAY,
+    PLAYER_SIZE,
+    PLAYER_BOTTOM_OFFSET,
+    PLAYER_MAX_HEALTH,
+)
 
 
 class Player(pygame.sprite.Sprite):
@@ -16,6 +22,7 @@ class Player(pygame.sprite.Sprite):
         animation_delay : int = PLAYER_ANIMATION_DELAY,
         running_frames: list[pygame.Surface] | None = None,
         catch_frames: list[pygame.Surface] | None = None,
+        max_health: int = PLAYER_MAX_HEALTH,
     ):
         super().__init__()
         self.frames = frames
@@ -31,9 +38,15 @@ class Player(pygame.sprite.Sprite):
         self.facing_right = True
         self.is_moving = False
         self.is_catching = False
+        self.max_health = max_health
+        self.health = max_health
 
         self.image = self.frames[self.current_frame]
         self.rect = pygame.Rect(x, y, size[0], size[1])
+
+    def take_damage(self, amount: int) -> None:
+        """Reduces health without allowing it to fall below zero."""
+        self.health = max(0, self.health - amount)
 
     def start_catch(self) -> None:
         """Starts the one-shot catch animation when frames are available."""

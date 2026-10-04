@@ -36,12 +36,22 @@ PLAYER_CATCH_FRAME_NAMES = [
 COIN_SIZE = (32,32) # display width and height in pixels 
 COIN_FRAME_NAMES = [f"coin{i}.png" for i in range(1, 8)]
 COIN_ANIMATION_DELAY = 125  # milliseconds for smooth natural rotation
-COIN_COUNT = 4  # Number of concurrent falling coins
-MAX_MISSED_COINS = 5
+COIN_COUNT = 2  # Number of concurrent falling coins
 
 # Bomb Settings
 BOMB_IMAGE_FILE = "bomb.png"
 BOMB_SIZE = (32, 32)
+BOMB_DAMAGE = 25
+COINS_PER_BOMB = 7
+
+# Star Settings
+STAR_IMAGE_FILE = "star1.png"
+STAR_SIZE = (32, 32)
+STAR_VALUE = 10
+COINS_PER_STAR = 10
+
+# Player Health
+PLAYER_MAX_HEALTH = 100
 
 # HUD Settings
 SCORE_FONT_SIZE = 28
@@ -50,6 +60,11 @@ FONT_FILE: str | None = None
 HUD_COLOR = (255, 255, 255)
 GAME_OVER_COLOR = (255, 70, 70)
 SCORE_POSITION = (20, 20)
+HEALTH_POSITION = (20, 60)
+HEALTH_BAR_POSITION = (20, 94)
+HEALTH_BAR_SIZE = (200, 16)
+HEALTH_BAR_BACKGROUND_COLOR = (75, 35, 35)
+HEALTH_BAR_COLOR = (70, 190, 95)
 
 # Main Menu Settings
 MENU_BACKGROUND_COLOR = (18, 30, 25)

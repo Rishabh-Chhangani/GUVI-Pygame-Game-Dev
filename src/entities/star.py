@@ -12,6 +12,7 @@ class StarSprite(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.pos_y = float(self.rect.y)
         self.speed = speed
+        self.respawned_this_update = False
 
     def reset(self, screen_width: int = 800) -> None:
         """Disappears the star from current position and respawns it above the screen."""
@@ -25,9 +26,11 @@ class StarSprite(pygame.sprite.Sprite):
     def update(self, screen_width: int = 800, screen_height: int = 600) -> None:
         """Moves the star downward and resets when out of bounds."""
         assert self.rect is not None
+        self.respawned_this_update = False
         self.pos_y += self.speed
         self.rect.y = int(self.pos_y)
 
         # Wrap around / respawn if past bottom
         if self.rect.top > screen_height:
             self.reset(screen_width)
+            self.respawned_this_update = True

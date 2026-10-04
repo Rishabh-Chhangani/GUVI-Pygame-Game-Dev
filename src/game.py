@@ -6,6 +6,7 @@ from src.asset_manager import AssetManager
 import src.entities.player as player_module
 import src.entities.coin as coin_module
 import src.entities.bomb as bomb_module
+import src.entities.star as star_module
 
 
 class Game:
@@ -39,8 +40,9 @@ class Game:
         self.running = True
         self.state = "MENU"
         self.score = 0
-        self.missed_coins = 0
-        self.game_over = False
+        self.coin_drop_count = 0
+        self.bomb_drop_count = 0
+        self.star_drop_count = 0
         self.score_font = pygame.font.Font(config.FONT_FILE, config.SCORE_FONT_SIZE)
         self.game_over_font = pygame.font.Font(config.FONT_FILE, config.GAME_OVER_FONT_SIZE)
         self.menu_title_font = pygame.font.Font(config.FONT_FILE, config.MENU_TITLE_FONT_SIZE)
@@ -62,11 +64,6 @@ class Game:
 
         # Initialize Entities
         self._init_entities()
-
-    @property
-    def tries_remaining(self) -> int:
-        """Remaining tries derived from the existing missed-coin count."""
-        return max(0, config.MAX_MISSED_COINS - self.missed_coins)
 
     def _init_entities(self):
         """Instantiates all player and world sprite entities."""
@@ -91,28 +88,73 @@ class Game:
             bottom_offset=config.PLAYER_BOTTOM_OFFSET
         )
 
-        # Animated Coins with smooth proportional scaling
-        coin_frames = self.assets.get_proportional_animation(config.COIN_FRAME_NAMES, target_box=config.COIN_SIZE)
-        self.coins_group: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
-        self.all_sprites: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
-        bomb_image = self.assets.get_image(
+        # Load collectible and hazard assets through AssetManager.
+        self.coin_frames = self.assets.get_proportional_animation(
+            config.COIN_FRAME_NAMES,
+            target_box=config.COIN_SIZE,
+        )
+        self.bomb_image = self.assets.get_image(
             config.BOMB_IMAGE_FILE,
             size=config.BOMB_SIZE,
             smooth=True,
         )
-        self.bomb: bomb_module.BombSprite = bomb_module.BombSprite(
-            image=bomb_image,
-            x=max(0, self.width - config.BOMB_SIZE[0] - 24),
-            y=24,
+        self.star_image = self.assets.get_image(
+            config.STAR_IMAGE_FILE,
+            size=config.STAR_SIZE,
+            smooth=True,
         )
+
+        self.coins_group: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
+        self.all_sprites: pygame.sprite.Group[coin_module.CoinSprite] = self.coins_group
+        self.bombs_group: pygame.sprite.Group[bomb_module.BombSprite] = pygame.sprite.Group()
+        self.stars_group: pygame.sprite.Group[star_module.StarSprite] = pygame.sprite.Group()
 
         # Spawn initial coins staggered across screen
         for _ in range(config.COIN_COUNT):
             spawn_x = random.randint(30, max(30, self.width - config.COIN_SIZE[0] - 30))
             spawn_y = -random.randint(50, 400)
-            coin = coin_module.CoinSprite(coin_frames, spawn_x, spawn_y, speed=random.uniform(2.5, 4.0))
-            self.coins_group.add(coin)
-            self.all_sprites.add(coin)
+            self._spawn_coin(spawn_x, spawn_y, random.uniform(2.5, 4.0))
+
+    def _spawn_coin(self, x: int, y: int, speed: float) -> None:
+        """Creates a coin and triggers rare drops at configured coin milestones."""
+        coin = coin_module.CoinSprite(self.coin_frames, x, y, speed=speed)
+        self.coins_group.add(coin)
+        self._register_coin_drop()
+
+    def _register_coin_drop(self) -> None:
+        """Tracks each initial spawn or respawn and triggers milestone hazards."""
+        self.coin_drop_count += 1
+
+        if self.coin_drop_count % config.COINS_PER_BOMB == 0:
+            self._spawn_bomb()
+        if self.coin_drop_count % config.COINS_PER_STAR == 0:
+            self._spawn_star()
+
+    def _spawn_bomb(self) -> None:
+        """Drops a bomb from a randomized position above the play area."""
+        spawn_x = random.randint(30, max(30, self.width - config.BOMB_SIZE[0] - 30))
+        spawn_y = -random.randint(50, 400)
+        bomb = bomb_module.BombSprite(
+            self.bomb_image,
+            spawn_x,
+            spawn_y,
+            speed=random.uniform(2.5, 4.0),
+        )
+        self.bombs_group.add(bomb)
+        self.bomb_drop_count += 1
+
+    def _spawn_star(self) -> None:
+        """Drops a rare, ten-point star from above the play area."""
+        spawn_x = random.randint(30, max(30, self.width - config.STAR_SIZE[0] - 30))
+        spawn_y = -random.randint(50, 400)
+        star = star_module.StarSprite(
+            self.star_image,
+            spawn_x,
+            spawn_y,
+            speed=random.uniform(2.5, 4.0),
+        )
+        self.stars_group.add(star)
+        self.star_drop_count += 1
 
     def reload_game_state(self):
         """Hot-reloads configuration, assets, and entities live without restarting."""
@@ -183,24 +225,27 @@ class Game:
     def _start_game_play(self):
         """Resets gameplay and enters the PLAYING state."""
         self.score = 0
-        self.missed_coins = 0
-        self.game_over = False
+        self.coin_drop_count = 0
+        self.bomb_drop_count = 0
+        self.star_drop_count = 0
         self.state = "PLAYING"
         self._init_entities()
 
     def _restart_playing_session(self):
         """Reinitializes the current session and starts playing immediately."""
         self.score = 0
-        self.missed_coins = 0
-        self.game_over = False
+        self.coin_drop_count = 0
+        self.bomb_drop_count = 0
+        self.star_drop_count = 0
         self.state = "PLAYING"
         self._init_entities()
 
     def _return_to_menu(self):
         """Resets the current gameplay session and returns to the menu."""
         self.score = 0
-        self.missed_coins = 0
-        self.game_over = False
+        self.coin_drop_count = 0
+        self.bomb_drop_count = 0
+        self.star_drop_count = 0
         self.state = "MENU"
         self._init_entities()
 
@@ -262,22 +307,24 @@ class Game:
         if self.state != "PLAYING":
             return
 
-        if self.game_over:
+        if self.player.health <= 0:
             self.state = "GAME_OVER"
             return
 
-        # Update coins and count those that pass the bottom of the screen.
+        # Keep coin spawns and milestone drops coordinated in the Game layer.
         for coin in self.coins_group:
             coin.update(self.width, self.height)
-            if coin.missed_this_update:
-                self.missed_coins += 1
-                if self.missed_coins >= config.MAX_MISSED_COINS:
-                    self.game_over = True
-                    self.state = "GAME_OVER"
-                    break
+            if coin.respawned_this_update:
+                self._register_coin_drop()
 
-        if self.state == "GAME_OVER":
-            return
+        for bomb in self.bombs_group:
+            bomb.update(self.width, self.height)
+            if bomb.respawned_this_update:
+                self.bomb_drop_count += 1
+        for star in self.stars_group:
+            star.update(self.width, self.height)
+            if star.respawned_this_update:
+                self.star_drop_count += 1
 
         # Update player position and animation
         self.player.update(self.width, self.height)
@@ -289,6 +336,22 @@ class Game:
             self.player.start_catch()
             for coin in collected_coins:
                 coin.reset(self.width)
+                self._register_coin_drop()
+
+        collected_stars = pygame.sprite.spritecollide(self.player, self.stars_group, False)
+        for star in collected_stars:
+            self.score += config.STAR_VALUE
+            star.reset(self.width)
+            self.star_drop_count += 1
+
+        hit_bombs = pygame.sprite.spritecollide(self.player, self.bombs_group, False)
+        for bomb in hit_bombs:
+            self.player.take_damage(config.BOMB_DAMAGE)
+            bomb.reset(self.width)
+            self.bomb_drop_count += 1
+            if self.player.health <= 0:
+                self.state = "GAME_OVER"
+                break
 
     def _draw_main_menu(self):
         """Draws the main menu screen."""
@@ -376,15 +439,24 @@ class Game:
 
         self.window.blit(self.bg_image, (0, 0))
         self.all_sprites.draw(self.window)
-        self.window.blit(self.bomb.image, self.bomb.rect)
+        self.bombs_group.draw(self.window)
+        self.stars_group.draw(self.window)
         self.player.draw(self.window)
 
         score_surface = self.score_font.render(f"Score: {self.score}", True, config.HUD_COLOR)
         self.window.blit(score_surface, config.SCORE_POSITION)
-
-        if self.state == "PLAYING":
-            tries_surface = self.score_font.render(f"Tries: {self.tries_remaining}", True, config.HUD_COLOR)
-            self.window.blit(tries_surface, (20, 60))
+        health_surface = self.score_font.render(
+            f"HP: {self.player.health}",
+            True,
+            config.HUD_COLOR,
+        )
+        self.window.blit(health_surface, config.HEALTH_POSITION)
+        health_bar_rect = pygame.Rect(*config.HEALTH_BAR_POSITION, *config.HEALTH_BAR_SIZE)
+        pygame.draw.rect(self.window, config.HEALTH_BAR_BACKGROUND_COLOR, health_bar_rect)
+        health_ratio = self.player.health / self.player.max_health
+        health_fill_rect = health_bar_rect.copy()
+        health_fill_rect.width = round(health_bar_rect.width * health_ratio)
+        pygame.draw.rect(self.window, config.HEALTH_BAR_COLOR, health_fill_rect)
 
         if self.state == "GAME_OVER":
             game_over_surface = self.game_over_font.render("GAME OVER", True, config.GAME_OVER_COLOR)
