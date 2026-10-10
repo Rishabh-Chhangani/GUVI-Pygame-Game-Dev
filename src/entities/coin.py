@@ -49,7 +49,7 @@ class CoinSprite(pygame.sprite.Sprite):
 
         # Animation
         self.animation_timer += dt
-        delay = self.animation_delay / 1000.0
+        delay = self.animation_delay
         if self.animation_timer >= delay:
             self.current_frame = (self.current_frame + 1) % len(self.frames)
             self.image = self.frames[self.current_frame]

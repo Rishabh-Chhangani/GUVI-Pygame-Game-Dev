@@ -10,6 +10,7 @@ from src.ui.hud import HUD
 from src.ui.juice import DamagePopup
 from src.data_manager import DataManager
 from src.audio_manager import AudioManager
+from src.entities.particles import ParticleSystem
 import src.entities.player as player_module
 import src.entities.coin as coin_module
 import src.entities.bomb as bomb_module
@@ -61,6 +62,7 @@ class Game:
         self.audio_manager = AudioManager(config.ASSETS_DIR)
         self.audio_manager.play_bgm()
         self.popups: list[DamagePopup] = []
+        self.particle_system = ParticleSystem()
         self.camera_shake = 0.0
         self.high_score = self.data_manager.high_score
 
@@ -135,6 +137,7 @@ class Game:
 
         # Spawn initial coins staggered across screen
         self.spawner.spawn_initial_coins(self.width)
+        self.particle_system.particles.clear()
 
     def _spawn_coin(self, x: int, y: int, speed: float) -> None:
         """Creates a coin and triggers rare drops at configured coin milestones."""
@@ -343,6 +346,8 @@ class Game:
             popup.update(dt)
         self.popups = [p for p in self.popups if p.timer > 0]
 
+        self.particle_system.update(dt)
+
         # Keep coin spawns and milestone drops coordinated in the Game layer.
         for coin in list(self.coins_group):
             coin.update(self.width, self.height, dt)
@@ -365,6 +370,7 @@ class Game:
             self.player.start_catch()
             for coin in collected_coins:
                 assert coin.rect is not None
+                self.particle_system.emit_coin_sparkles(coin.rect.centerx, coin.rect.centery)
                 coin.reset(self.width)
                 self.popups.append(DamagePopup(coin.rect.centerx, coin.rect.top, "+1", (255, 215, 0)))
                 self.audio_manager.play_sfx("coin")
@@ -374,6 +380,7 @@ class Game:
         for star in collected_stars:
             assert star.rect is not None
             self.score += config.STAR_VALUE
+            self.particle_system.emit_coin_sparkles(star.rect.centerx, star.rect.centery, count=20)
             star.kill()
             self.popups.append(DamagePopup(star.rect.centerx, star.rect.top, f"+{config.STAR_VALUE}", (0, 255, 255)))
             self.audio_manager.play_sfx("coin")
@@ -382,6 +389,7 @@ class Game:
         for bomb in hit_bombs:
             assert bomb.rect is not None
             if self.player.take_damage(config.BOMB_DAMAGE):
+                self.particle_system.emit_bomb_shrapnel(bomb.rect.centerx, bomb.rect.centery)
                 bomb.kill()
                 self.camera_shake = 15.0
                 self.popups.append(DamagePopup(bomb.rect.centerx, bomb.rect.top, f"-{config.BOMB_DAMAGE}", (255, 50, 50)))
@@ -493,6 +501,7 @@ class Game:
             offset_y = random.uniform(-self.camera_shake, self.camera_shake)
 
         self.window.blit(self.bg_image, (int(offset_x), int(offset_y)))
+        self.particle_system.draw(self.window)
         self.all_sprites.draw(self.window)
         self.bombs_group.draw(self.window)
         self.stars_group.draw(self.window)

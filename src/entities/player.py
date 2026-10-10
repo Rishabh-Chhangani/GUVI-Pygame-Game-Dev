@@ -134,7 +134,7 @@ class Player(pygame.sprite.Sprite):
             self.invulnerability_timer = max(0.0, self.invulnerability_timer - dt)
 
         self.animation_timer += dt
-        catch_delay = self.animation_delay / 1000.0
+        catch_delay = self.animation_delay
         if self.is_catching:
             if self.animation_timer >= catch_delay:
                 self.current_frame += 1
