@@ -7,7 +7,7 @@ Implement a structured Scene State Machine to manage game lifecycle transitions 
 ---
 
 ## 2. Scene State Machine Architecture
-
+ 
 ```mermaid
 stateDiagram-v2
     [*] --> MenuScene: Application Launch

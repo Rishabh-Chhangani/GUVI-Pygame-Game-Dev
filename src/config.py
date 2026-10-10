@@ -15,9 +15,11 @@ BG_IMAGE_FILE = "bg1.png"
 
 # Player Settings
 PLAYER_SIZE = (79, 82)  # display widhth and height in pixels
-PLAYER_SPEED = 6
+PLAYER_SPEED = 360  # pixels per second
 PLAYER_BOTTOM_OFFSET = 70  # Pixels from the bottom of the screen
-PLAYER_ANIMATION_DELAY = 100  # milliseconds
+PLAYER_ANIMATION_DELAY = 0.1  # seconds
+PLAYER_INVULNERABILITY_DURATION = 1.2  # seconds
+PLAYER_COMBO_WINDOW = 2.5  # seconds before combo resets
 PLAYER_FRAME_NAMES = [
     "idle_anim/idle1.png",
     "idle_anim/idle2.png",
@@ -35,13 +37,14 @@ PLAYER_CATCH_FRAME_NAMES = [
 # Coin Settings
 COIN_SIZE = (32,32) # display width and height in pixels 
 COIN_FRAME_NAMES = [f"coin{i}.png" for i in range(1, 8)]
-COIN_ANIMATION_DELAY = 125  # milliseconds for smooth natural rotation
+COIN_ANIMATION_DELAY = 0.125  # seconds for smooth natural rotation
 COIN_COUNT = 2  # Number of concurrent falling coins
 
 # Bomb Settings
 BOMB_IMAGE_FILE = "bomb.png"
 BOMB_SIZE = (32, 32)
 BOMB_DAMAGE = 25
+STAR_DAMAGE = 25
 COINS_PER_BOMB = 7
 
 # Star Settings
@@ -49,6 +52,7 @@ STAR_IMAGE_FILE = "star1.png"
 STAR_SIZE = (32, 32)
 STAR_VALUE = 10
 COINS_PER_STAR = 10
+COIN_VALUE = 1
 
 # Player Health
 PLAYER_MAX_HEALTH = 100

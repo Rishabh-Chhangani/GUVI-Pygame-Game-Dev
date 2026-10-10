@@ -12,13 +12,14 @@ Transform the prototype into a complete, engaging arcade game by activating unus
 flowchart TD
     Spawner["Item Spawner (Tick Timer)"] -->|Spawn Wave| DropQueue["Falling Items"]
     DropQueue --> Coin["CoinSprite (Collectible)"]
-    DropQueue --> Star["StarSprite (Hazard)"]
+    DropQueue --> Star["StarSprite (Collectible Bonus)"]
     
-    Player["Player Ninja"] -->|Collide with Coin| Collect["Collect Coin:<br/>+Score, +Combo, Play SFX"]
-    Player -->|Collide with Star| Hazard["Hazard Hit:<br/>-1 Life, Reset Combo, Flash Red"]
+    Player["Player Ninja"] -->|Collide with Coin| Collect["Collect Coin:<br/>+1 Score, +Combo, Play SFX"]
+    Player -->|Collide with Star| Reward["Collect Star:<br/>+10 Score, +Combo, Play SFX"]
     
     Collect --> HUD["Update HUD (Score, Highscore, Multiplier)"]
-    Hazard --> CheckLives{"Remaining Lives > 0?"}
+    Reward --> HUD
+    HUD --> CheckLives{"Game Continues?"}
     
     CheckLives -->|Yes| HUD
     CheckLives -->|No| GameOver["Trigger Game Over Event"]
@@ -31,12 +32,12 @@ flowchart TD
 ### 3.1 Animated Coin Sprite (`src/entities/coin.py`)
 Utilize the 7 coin frames (`coin1.png` through `coin7.png`) to create a smooth rotating coin animation:
 * **Animation Cycle:** 70ms per frame cycling through `coin1.png` to `coin7.png`.
-* **Value & Points:** Standard coins yield +10 points. Rare/golden variants can yield bonus score.
+* **Value & Points:** Standard coins yield +1 point each. Rare/golden variants can yield bonus score.
 * **Movement:** Moves downward at random speeds (e.g., 2.0 to 4.5 px/frame).
 
 ```python
 class CoinSprite(pygame.sprite.Sprite):
-    def __init__(self, frames, x, y, speed=3.0, value=10):
+    def __init__(self, frames, x, y, speed=3.0, value=1):
         super().__init__()
         self.frames = frames
         self.current_frame = 0
@@ -61,12 +62,13 @@ class CoinSprite(pygame.sprite.Sprite):
             self.last_update = now
 ```
 
-### 3.2 Hazard System (`src/entities/star.py`)
-* Stars act as ninja obstacles / shuriken hazards.
-* Colliding with a star inflicts damage (loss of 1 life) and grants temporary invulnerability frames (i-frames with blinking visual effect).
+### 3.2 Bonus Star System (`src/entities/star.py`)
+* Stars are collectible bonus pickups, not hazards.
+* Collecting a star adds +10 points and can contribute to the player's current combo/multiplier.
+* Bombs remain the hazard object in the gameplay loop.
 
 ### 3.3 Dynamic Spawner (`src/entities/spawner.py`)
-* Automatically spawns coins and hazard stars above the screen (`y = -50`) at random X positions across screen width.
+* Automatically spawns coins and bonus stars above the screen (`y = -50`) at random X positions across screen width.
 * Progressive Difficulty: Decreases spawn intervals and increases item drop velocity as the player's score rises.
 
 ### 3.4 Heads-Up Display HUD (`src/ui/hud.py`)
@@ -79,8 +81,8 @@ class CoinSprite(pygame.sprite.Sprite):
 ## 4. Implementation Checklist
 
 - [ ] Implement `src/entities/coin.py` loading `coin1.png` through `coin7.png`.
-- [ ] Refactor `src/entities/star.py` with custom collision radii and hazard behavior.
+- [ ] Refactor `src/entities/star.py` with collectible bonus behavior and +10 score value.
 - [ ] Create `src/entities/spawner.py` for timed wave generation across the screen width.
 - [ ] Implement `src/ui/hud.py` rendering score, high score, and remaining lives using `pygame.font`.
 - [ ] Integrate group collision handling (`pygame.sprite.spritecollide`) in the main game loop.
-- [ ] Implement player invulnerability frames (blinking ninja on hazard hit).
+- [ ] Implement player invulnerability frames for damage from bomb hits only.

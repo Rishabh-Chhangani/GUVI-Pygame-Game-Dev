@@ -1,8 +1,15 @@
 import importlib
 import random
+
 import pygame
+
 import src.config as config
 from src.asset_manager import AssetManager
+from src.entities.spawner import Spawner
+from src.ui.hud import HUD
+from src.ui.juice import DamagePopup
+from src.data_manager import DataManager
+from src.audio_manager import AudioManager
 import src.entities.player as player_module
 import src.entities.coin as coin_module
 import src.entities.bomb as bomb_module
@@ -49,6 +56,13 @@ class Game:
         self.game_over_font = pygame.font.Font(config.FONT_FILE, config.GAME_OVER_FONT_SIZE)
         self.menu_title_font = pygame.font.Font(config.FONT_FILE, config.MENU_TITLE_FONT_SIZE)
         self.menu_button_font = pygame.font.Font(config.FONT_FILE, config.MENU_BUTTON_FONT_SIZE)
+        self.hud = HUD(self.score_font)
+        self.data_manager = DataManager(config.ROOT_DIR / "data")
+        self.audio_manager = AudioManager(config.ASSETS_DIR)
+        self.audio_manager.play_bgm()
+        self.popups: list[DamagePopup] = []
+        self.camera_shake = 0.0
+        self.high_score = self.data_manager.high_score
 
         # Menu UI
         self.play_button_rect = pygame.Rect(0, 0, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT)
@@ -110,17 +124,27 @@ class Game:
         self.all_sprites: pygame.sprite.Group[coin_module.CoinSprite] = self.coins_group
         self.bombs_group: pygame.sprite.Group[bomb_module.BombSprite] = pygame.sprite.Group()
         self.stars_group: pygame.sprite.Group[star_module.StarSprite] = pygame.sprite.Group()
+        self.spawner = Spawner(
+            coin_group=self.coins_group,
+            bomb_group=self.bombs_group,
+            star_group=self.stars_group,
+            coin_frames=self.coin_frames,
+            bomb_image=self.bomb_image,
+            star_image=self.star_image,
+        )
 
         # Spawn initial coins staggered across screen
-        for _ in range(config.COIN_COUNT):
-            spawn_x = random.randint(30, max(30, self.width - config.COIN_SIZE[0] - 30))
-            spawn_y = -random.randint(50, 400)
-            self._spawn_coin(spawn_x, spawn_y, random.uniform(2.5, 4.0))
+        self.spawner.spawn_initial_coins(self.width)
 
     def _spawn_coin(self, x: int, y: int, speed: float) -> None:
         """Creates a coin and triggers rare drops at configured coin milestones."""
         coin = coin_module.CoinSprite(self.coin_frames, x, y, speed=speed)
         self.coins_group.add(coin)
+        self._register_coin_drop()
+
+    def _spawn_game_coin(self) -> None:
+        """Uses the spawner to generate a coin from the top of the play area."""
+        self.spawner.spawn_coin(self.width)
         self._register_coin_drop()
 
     def _register_coin_drop(self) -> None:
@@ -138,28 +162,12 @@ class Game:
 
     def _spawn_bomb(self) -> None:
         """Drops a bomb from a randomized position above the play area."""
-        spawn_x = random.randint(30, max(30, self.width - config.BOMB_SIZE[0] - 30))
-        spawn_y = -random.randint(50, 400)
-        bomb = bomb_module.BombSprite(
-            self.bomb_image,
-            spawn_x,
-            spawn_y,
-            speed=random.uniform(2.5, 4.0),
-        )
-        self.bombs_group.add(bomb)
+        self.spawner.spawn_bomb(self.width)
         self.bomb_drop_count += 1
 
     def _spawn_star(self) -> None:
         """Drops a rare, ten-point star from above the play area."""
-        spawn_x = random.randint(30, max(30, self.width - config.STAR_SIZE[0] - 30))
-        spawn_y = -random.randint(50, 400)
-        star = star_module.StarSprite(
-            self.star_image,
-            spawn_x,
-            spawn_y,
-            speed=random.uniform(2.5, 4.0),
-        )
-        self.stars_group.add(star)
+        self.spawner.spawn_star(self.width)
         self.star_drop_count += 1
 
     def reload_game_state(self):
@@ -200,14 +208,14 @@ class Game:
         self.game_over_restart_button_rect.center = (self.width // 2, self.height // 2 + 100)
         self.game_over_menu_button_rect.center = (self.width // 2, self.height // 2 + 100 + config.MENU_BUTTON_HEIGHT + config.MENU_BUTTON_SPACING)
 
-    def _handle_menu_click(self, mouse_pos):
+    def _handle_menu_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles main menu button interactions."""
         if self.play_button_rect.collidepoint(mouse_pos):
             self._start_game_play()
         elif self.quit_button_rect.collidepoint(mouse_pos):
             self.running = False
 
-    def _handle_pause_click(self, mouse_pos):
+    def _handle_pause_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles pause menu button interactions."""
         if self.resume_button_rect.collidepoint(mouse_pos):
             self.state = "PLAYING"
@@ -216,12 +224,12 @@ class Game:
         elif self.options_button_rect.collidepoint(mouse_pos):
             self.state = "OPTIONS"
 
-    def _handle_options_click(self, mouse_pos):
+    def _handle_options_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles options screen button interactions."""
         if self.back_button_rect.collidepoint(mouse_pos):
             self.state = "PAUSED"
 
-    def _handle_game_over_click(self, mouse_pos):
+    def _handle_game_over_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles game-over screen button interactions."""
         if self.game_over_restart_button_rect.collidepoint(mouse_pos):
             self._restart_playing_session()
@@ -293,6 +301,8 @@ class Game:
                     self._layout_game_over_buttons()
                 elif event.key == pygame.K_F5:
                     self.reload_game_state()
+                elif event.key == pygame.K_m:
+                    self.audio_manager.toggle_mute()
                 elif self.state == "MENU" and event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     self._start_game_play()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -312,7 +322,7 @@ class Game:
             self.width, self.height = drawable_size
             self.bg_image = pygame.transform.scale(self.bg_raw, drawable_size)
 
-    def update(self):
+    def update(self, dt: float = 1 / 60):
         """Updates game state, kinematics, and collisions."""
         self._sync_drawable_size()
 
@@ -321,48 +331,66 @@ class Game:
 
         if self.player.health <= 0:
             self.state = "GAME_OVER"
+            self.audio_manager.play_sfx("game_over")
+            if self.data_manager.save_high_score(self.score):
+                self.high_score = self.score
             return
 
+        self.hud.update(dt, self.player.health)
+        if self.camera_shake > 0:
+            self.camera_shake = max(0.0, self.camera_shake - 60.0 * dt)
+        for popup in self.popups:
+            popup.update(dt)
+        self.popups = [p for p in self.popups if p.timer > 0]
+
         # Keep coin spawns and milestone drops coordinated in the Game layer.
-        for coin in self.coins_group:
-            coin.update(self.width, self.height)
+        for coin in list(self.coins_group):
+            coin.update(self.width, self.height, dt)
             if coin.respawned_this_update:
                 self._register_coin_drop()
 
-        for bomb in self.bombs_group:
-            bomb.update(self.width, self.height)
-            if bomb.respawned_this_update:
-                self.bomb_drop_count += 1
-        for star in self.stars_group:
-            star.update(self.width, self.height)
-            if star.respawned_this_update:
-                self.star_drop_count += 1
+        for bomb in list(self.bombs_group):
+            bomb.update(self.width, self.height, dt)
+        for star in list(self.stars_group):
+            star.update(self.width, self.height, dt)
 
         # Update player position and animation
-        self.player.update(self.width, self.height)
+        self.player.update(self.width, self.height, dt)
 
         # Collision detection: When player collects a coin, coin disappears and respawns from top
         collected_coins = pygame.sprite.spritecollide(self.player, self.coins_group, False)
         if collected_coins:
-            self.score += len(collected_coins)
+            self.player.record_coin_pickup(dt)
+            self.score += sum(coin.value for coin in collected_coins) * self.player.get_combo_multiplier()
             self.player.start_catch()
             for coin in collected_coins:
+                assert coin.rect is not None
                 coin.reset(self.width)
+                self.popups.append(DamagePopup(coin.rect.centerx, coin.rect.top, "+1", (255, 215, 0)))
+                self.audio_manager.play_sfx("coin")
                 self._register_coin_drop()
 
         collected_stars = pygame.sprite.spritecollide(self.player, self.stars_group, False)
         for star in collected_stars:
+            assert star.rect is not None
             self.score += config.STAR_VALUE
-            star.reset(self.width)
-            self.star_drop_count += 1
+            star.kill()
+            self.popups.append(DamagePopup(star.rect.centerx, star.rect.top, f"+{config.STAR_VALUE}", (0, 255, 255)))
+            self.audio_manager.play_sfx("coin")
 
         hit_bombs = pygame.sprite.spritecollide(self.player, self.bombs_group, False)
         for bomb in hit_bombs:
-            self.player.take_damage(config.BOMB_DAMAGE)
-            bomb.reset(self.width)
-            self.bomb_drop_count += 1
+            assert bomb.rect is not None
+            if self.player.take_damage(config.BOMB_DAMAGE):
+                bomb.kill()
+                self.camera_shake = 15.0
+                self.popups.append(DamagePopup(bomb.rect.centerx, bomb.rect.top, f"-{config.BOMB_DAMAGE}", (255, 50, 50)))
+                self.audio_manager.play_sfx("hit")
             if self.player.health <= 0:
                 self.state = "GAME_OVER"
+                self.audio_manager.play_sfx("game_over")
+                if self.data_manager.save_high_score(self.score):
+                    self.high_score = self.score
                 break
 
     def _draw_main_menu(self):
@@ -388,7 +416,12 @@ class Game:
 
     def _draw_pause_menu(self):
         """Draws the pause overlay and available actions."""
-        self.window.blit(self.bg_image, (0, 0))
+        offset_x, offset_y = 0, 0
+        if self.camera_shake > 0:
+            offset_x = random.uniform(-self.camera_shake, self.camera_shake)
+            offset_y = random.uniform(-self.camera_shake, self.camera_shake)
+
+        self.window.blit(self.bg_image, (int(offset_x), int(offset_y)))
         overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 140))
         self.window.blit(overlay, (0, 0))
@@ -416,7 +449,12 @@ class Game:
 
     def _draw_options_menu(self):
         """Draws the options screen."""
-        self.window.blit(self.bg_image, (0, 0))
+        offset_x, offset_y = 0, 0
+        if self.camera_shake > 0:
+            offset_x = random.uniform(-self.camera_shake, self.camera_shake)
+            offset_y = random.uniform(-self.camera_shake, self.camera_shake)
+
+        self.window.blit(self.bg_image, (int(offset_x), int(offset_y)))
         overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 140))
         self.window.blit(overlay, (0, 0))
@@ -449,26 +487,20 @@ class Game:
             pygame.display.update()
             return
 
-        self.window.blit(self.bg_image, (0, 0))
+        offset_x, offset_y = 0, 0
+        if self.camera_shake > 0:
+            offset_x = random.uniform(-self.camera_shake, self.camera_shake)
+            offset_y = random.uniform(-self.camera_shake, self.camera_shake)
+
+        self.window.blit(self.bg_image, (int(offset_x), int(offset_y)))
         self.all_sprites.draw(self.window)
         self.bombs_group.draw(self.window)
         self.stars_group.draw(self.window)
         self.player.draw(self.window)
 
-        score_surface = self.score_font.render(f"Score: {self.score}", True, config.HUD_COLOR)
-        self.window.blit(score_surface, config.SCORE_POSITION)
-        health_surface = self.score_font.render(
-            f"HP: {self.player.health}",
-            True,
-            config.HUD_COLOR,
-        )
-        self.window.blit(health_surface, config.HEALTH_POSITION)
-        health_bar_rect = pygame.Rect(*config.HEALTH_BAR_POSITION, *config.HEALTH_BAR_SIZE)
-        pygame.draw.rect(self.window, config.HEALTH_BAR_BACKGROUND_COLOR, health_bar_rect)
-        health_ratio = self.player.health / self.player.max_health
-        health_fill_rect = health_bar_rect.copy()
-        health_fill_rect.width = round(health_bar_rect.width * health_ratio)
-        pygame.draw.rect(self.window, config.HEALTH_BAR_COLOR, health_fill_rect)
+        self.hud.draw(self.window, self.score, self.player.health, self.player.max_health)
+        for popup in self.popups:
+            popup.draw(self.window)
 
         if self.state == "GAME_OVER":
             game_over_surface = self.game_over_font.render("GAME OVER", True, config.GAME_OVER_COLOR)
@@ -493,9 +525,9 @@ class Game:
     def run(self):
         """Main game loop."""
         while self.running:
-            self.clock.tick(config.FPS)
+            dt = self.clock.tick(config.FPS) / 1000.0
             self.handle_events()
-            self.update()
+            self.update(dt)
             self.draw()
 
         pygame.quit()

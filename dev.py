@@ -14,7 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 def get_latest_mtime() -> float:
     """Returns the most recent modification time across all watched project files."""
-    mtimes = []
+    mtimes: list[float] = []
     for path in PROJECT_ROOT.rglob("*"):
         # Ignore git, cache, and editor folders
         if any(part.startswith((".", "__pycache__", "build", "dist")) for part in path.parts):
@@ -29,9 +29,9 @@ def get_latest_mtime() -> float:
 
 def run_dev_server():
     print("=" * 60)
-    print(" 🚀 Ninja Collector Auto-Reloader active!")
-    print(" 💾 Save any Python or asset file (Ctrl+S) to auto-reload.")
-    print(" 🛑 Press Ctrl+C in this terminal to stop.")
+    print(" [~] Ninja Collector Auto-Reloader active!")
+    print(" [SAVE] Save any Python or asset file (Ctrl+S) to auto-reload.")
+    print(" [STOP] Press Ctrl+C in this terminal to stop.")
     print("=" * 60)
 
     last_mtime = get_latest_mtime()

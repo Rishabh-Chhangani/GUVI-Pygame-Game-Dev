@@ -347,13 +347,18 @@ Included Python standard-library modules:
 - [x] Options screen
 - [x] Restart
 - [x] Return to Main Menu
+- [x] Persistent High Scores (data/highscores.json)
+- [x] Audio Manager (SFX and BGM)
+- [x] Godot-style UI Juice (Animated health bars, floating damage numbers, screen shake)
+- [x] Delta-Time (dt) based movement and animations
+- [x] Combo multiplier system
 
 ## 16. Known Limitations / Not Yet Implemented
 
-- No persistent high-score storage
-- No audio or music system
+- [x] Persistent high-score storage (DataManager)
+- [x] Audio and music system (AudioManager)
 - No difficulty progression or level scaling
-- No bomb blast animation or damage/invulnerability effects
+- [x] Invulnerability flashing, screen shake, and damage popups (UI Juice)
 - No power-ups or additional collectible types beyond coins and the rare star
 - No advanced menu art or background image support in the menu system yet
 - No real settings implementation beyond a placeholder options screen
