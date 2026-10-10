@@ -1,9 +1,17 @@
+import sys
 from pathlib import Path
 
 # Paths
-SRC_DIR = Path(__file__).resolve().parent
-ROOT_DIR = SRC_DIR.parent
+if getattr(sys, 'frozen', False):
+    # Running as PyInstaller executable
+    ROOT_DIR = Path(sys._MEIPASS)
+else:
+    # Running from source
+    SRC_DIR = Path(__file__).resolve().parent
+    ROOT_DIR = SRC_DIR.parent
+
 ASSETS_DIR = ROOT_DIR / "assets"
+USER_DATA_DIR = Path.home() / ".ninja_collector"
 
 # Window & Display
 DEFAULT_WIDTH = 800
@@ -53,6 +61,12 @@ STAR_SIZE = (32, 32)
 STAR_VALUE = 10
 COINS_PER_STAR = 10
 COIN_VALUE = 1
+
+# Magnet Settings
+MAGNET_IMAGE_FILE = "magnet.png" # Need this asset!
+MAGNET_SIZE = (32, 32)
+COINS_PER_MAGNET = 20
+MAGNET_DURATION = 5.0 # seconds
 
 # Player Health
 PLAYER_MAX_HEALTH = 100

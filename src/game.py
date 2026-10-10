@@ -53,12 +53,15 @@ class Game:
         self.star_drop_count = 0
         self.coins_since_bomb = 0
         self.coins_since_star = 0
+        self.coins_since_magnet = 0
+        self.difficulty_multiplier = 1.0
+        self.survival_time = 0.0
         self.score_font = pygame.font.Font(config.FONT_FILE, config.SCORE_FONT_SIZE)
         self.game_over_font = pygame.font.Font(config.FONT_FILE, config.GAME_OVER_FONT_SIZE)
         self.menu_title_font = pygame.font.Font(config.FONT_FILE, config.MENU_TITLE_FONT_SIZE)
         self.menu_button_font = pygame.font.Font(config.FONT_FILE, config.MENU_BUTTON_FONT_SIZE)
         self.hud = HUD(self.score_font)
-        self.data_manager = DataManager(config.ROOT_DIR / "data")
+        self.data_manager = DataManager(config.USER_DATA_DIR)
         self.audio_manager = AudioManager(config.ASSETS_DIR)
         self.audio_manager.play_bgm()
         self.popups: list[DamagePopup] = []
@@ -121,11 +124,19 @@ class Game:
             size=config.STAR_SIZE,
             smooth=True,
         )
+        self.magnet_image = self.assets.get_image(
+            config.MAGNET_IMAGE_FILE,
+            size=config.MAGNET_SIZE,
+            smooth=True,
+        )
 
         self.coins_group: pygame.sprite.Group[coin_module.CoinSprite] = pygame.sprite.Group()
         self.all_sprites: pygame.sprite.Group[coin_module.CoinSprite] = self.coins_group
         self.bombs_group: pygame.sprite.Group[bomb_module.BombSprite] = pygame.sprite.Group()
         self.stars_group: pygame.sprite.Group[star_module.StarSprite] = pygame.sprite.Group()
+        from src.entities.magnet import MagnetSprite
+        self.magnets_group: pygame.sprite.Group[MagnetSprite] = pygame.sprite.Group()
+        
         self.spawner = Spawner(
             coin_group=self.coins_group,
             bomb_group=self.bombs_group,
@@ -133,21 +144,27 @@ class Game:
             coin_frames=self.coin_frames,
             bomb_image=self.bomb_image,
             star_image=self.star_image,
+            magnet_group=self.magnets_group,
+            magnet_image=self.magnet_image,
         )
 
         # Spawn initial coins staggered across screen
         self.spawner.spawn_initial_coins(self.width)
         self.particle_system.particles.clear()
 
+    def get_difficulty(self) -> float:
+        """Returns the current difficulty multiplier based on survival without bomb hits."""
+        return self.difficulty_multiplier
+
     def _spawn_coin(self, x: int, y: int, speed: float) -> None:
         """Creates a coin and triggers rare drops at configured coin milestones."""
-        coin = coin_module.CoinSprite(self.coin_frames, x, y, speed=speed)
+        coin = coin_module.CoinSprite(self.coin_frames, x, y, speed=speed * self.get_difficulty())
         self.coins_group.add(coin)
         self._register_coin_drop()
 
     def _spawn_game_coin(self) -> None:
         """Uses the spawner to generate a coin from the top of the play area."""
-        self.spawner.spawn_coin(self.width)
+        self.spawner.spawn_coin(self.width, difficulty=self.get_difficulty())
         self._register_coin_drop()
 
     def _register_coin_drop(self) -> None:
@@ -155,6 +172,7 @@ class Game:
         self.coin_drop_count += 1
         self.coins_since_bomb += 1
         self.coins_since_star += 1
+        self.coins_since_magnet += 1
 
         if self.coins_since_bomb >= config.COINS_PER_BOMB:
             self.coins_since_bomb = 0
@@ -162,16 +180,23 @@ class Game:
         if self.coins_since_star >= config.COINS_PER_STAR:
             self.coins_since_star = 0
             self._spawn_star()
+        if self.coins_since_magnet >= config.COINS_PER_MAGNET:
+            self.coins_since_magnet = 0
+            self._spawn_magnet()
 
     def _spawn_bomb(self) -> None:
         """Drops a bomb from a randomized position above the play area."""
-        self.spawner.spawn_bomb(self.width)
+        self.spawner.spawn_bomb(self.width, difficulty=self.get_difficulty())
         self.bomb_drop_count += 1
 
     def _spawn_star(self) -> None:
         """Drops a rare, ten-point star from above the play area."""
-        self.spawner.spawn_star(self.width)
+        self.spawner.spawn_star(self.width, difficulty=self.get_difficulty())
         self.star_drop_count += 1
+
+    def _spawn_magnet(self) -> None:
+        """Drops a magnet power-up from above the play area."""
+        self.spawner.spawn_magnet(self.width, difficulty=self.get_difficulty())
 
     def reload_game_state(self):
         """Hot-reloads configuration, assets, and entities live without restarting."""
@@ -247,6 +272,9 @@ class Game:
         self.star_drop_count = 0
         self.coins_since_bomb = 0
         self.coins_since_star = 0
+        self.coins_since_magnet = 0
+        self.difficulty_multiplier = 1.0
+        self.survival_time = 0.0
         self.state = "PLAYING"
         self._init_entities()
 
@@ -269,6 +297,9 @@ class Game:
         self.star_drop_count = 0
         self.coins_since_bomb = 0
         self.coins_since_star = 0
+        self.coins_since_magnet = 0
+        self.difficulty_multiplier = 1.0
+        self.survival_time = 0.0
         self.state = "MENU"
         self._init_entities()
 
@@ -339,6 +370,7 @@ class Game:
                 self.high_score = self.score
             return
 
+        self.survival_time += dt
         self.hud.update(dt, self.player.health)
         if self.camera_shake > 0:
             self.camera_shake = max(0.0, self.camera_shake - 60.0 * dt)
@@ -348,9 +380,14 @@ class Game:
 
         self.particle_system.update(dt)
 
+        magnet_target = None
+        if self.player.magnet_timer > 0:
+            assert self.player.rect is not None
+            magnet_target = (float(self.player.rect.centerx), float(self.player.rect.centery))
+
         # Keep coin spawns and milestone drops coordinated in the Game layer.
         for coin in list(self.coins_group):
-            coin.update(self.width, self.height, dt)
+            coin.update(self.width, self.height, dt, self.get_difficulty(), magnet_target)
             if coin.respawned_this_update:
                 self._register_coin_drop()
 
@@ -358,20 +395,23 @@ class Game:
             bomb.update(self.width, self.height, dt)
         for star in list(self.stars_group):
             star.update(self.width, self.height, dt)
+        for magnet in list(self.magnets_group):
+            magnet.update(self.width, self.height, dt, self.get_difficulty())
 
         # Update player position and animation
-        self.player.update(self.width, self.height, dt)
+        self.player.update(self.width, self.height, dt, self.get_difficulty())
 
         # Collision detection: When player collects a coin, coin disappears and respawns from top
         collected_coins = pygame.sprite.spritecollide(self.player, self.coins_group, False)
         if collected_coins:
+            self.difficulty_multiplier += len(collected_coins) * 0.005 # +0.5% speed per coin
             self.player.record_coin_pickup(dt)
             self.score += sum(coin.value for coin in collected_coins) * self.player.get_combo_multiplier()
             self.player.start_catch()
             for coin in collected_coins:
                 assert coin.rect is not None
                 self.particle_system.emit_coin_sparkles(coin.rect.centerx, coin.rect.centery)
-                coin.reset(self.width)
+                coin.reset(self.width, self.get_difficulty())
                 self.popups.append(DamagePopup(coin.rect.centerx, coin.rect.top, "+1", (255, 215, 0)))
                 self.audio_manager.play_sfx("coin")
                 self._register_coin_drop()
@@ -379,16 +419,26 @@ class Game:
         collected_stars = pygame.sprite.spritecollide(self.player, self.stars_group, False)
         for star in collected_stars:
             assert star.rect is not None
+            self.difficulty_multiplier += 0.02 # +2% speed per star
             self.score += config.STAR_VALUE
             self.particle_system.emit_coin_sparkles(star.rect.centerx, star.rect.centery, count=20)
             star.kill()
             self.popups.append(DamagePopup(star.rect.centerx, star.rect.top, f"+{config.STAR_VALUE}", (0, 255, 255)))
             self.audio_manager.play_sfx("coin")
 
+        collected_magnets = pygame.sprite.spritecollide(self.player, self.magnets_group, False)
+        for magnet in collected_magnets:
+            assert magnet.rect is not None
+            self.player.activate_magnet(config.MAGNET_DURATION)
+            magnet.kill()
+            self.popups.append(DamagePopup(magnet.rect.centerx, magnet.rect.top, "MAGNET!", (0, 100, 255)))
+            self.audio_manager.play_sfx("coin")
+
         hit_bombs = pygame.sprite.spritecollide(self.player, self.bombs_group, False)
         for bomb in hit_bombs:
             assert bomb.rect is not None
             if self.player.take_damage(config.BOMB_DAMAGE):
+                self.difficulty_multiplier = 1.0 # Reset speed on bomb hit
                 self.particle_system.emit_bomb_shrapnel(bomb.rect.centerx, bomb.rect.centery)
                 bomb.kill()
                 self.camera_shake = 15.0
@@ -505,9 +555,10 @@ class Game:
         self.all_sprites.draw(self.window)
         self.bombs_group.draw(self.window)
         self.stars_group.draw(self.window)
+        self.magnets_group.draw(self.window)
         self.player.draw(self.window)
 
-        self.hud.draw(self.window, self.score, self.player.health, self.player.max_health)
+        self.hud.draw(self.window, self.score, self.player.health, self.player.max_health, self.survival_time)
         for popup in self.popups:
             popup.draw(self.window)
 

@@ -13,9 +13,12 @@ class HUD:
         self.health_bar.actual_health = current_health
         self.health_bar.update(dt)
 
-    def draw(self, surface: pygame.Surface, score: int, health: int, max_health: int) -> None:
+    def draw(self, surface: pygame.Surface, score: int, health: int, max_health: int, survival_time: float) -> None:
         score_surface = self.font.render(f"Score: {score}", True, config.HUD_COLOR)
         surface.blit(score_surface, config.SCORE_POSITION)
+        
+        timer_surface = self.font.render(f"Time: {int(survival_time)}s", True, (255, 200, 100))
+        surface.blit(timer_surface, (config.SCORE_POSITION[0] + 150, config.SCORE_POSITION[1]))
 
         health_surface = self.font.render(f"HP: {health}", True, config.HUD_COLOR)
         surface.blit(health_surface, config.HEALTH_POSITION)

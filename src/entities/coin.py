@@ -29,7 +29,7 @@ class CoinSprite(pygame.sprite.Sprite):
         self.speed = speed
         self.respawned_this_update = False
 
-    def reset(self, screen_width: int = 800) -> None:
+    def reset(self, screen_width: int = 800, difficulty: float = 1.0) -> None:
         """Resets the coin above the screen at a randomized horizontal position and speed."""
         assert self.rect is not None
         rect_height = int(self.rect.height)
@@ -37,14 +37,23 @@ class CoinSprite(pygame.sprite.Sprite):
         max_x = max(10, screen_width - int(self.rect.width) - 10)
         self.rect.x = random.randint(10, max_x)
         self.rect.y = int(self.pos_y)
-        self.speed = random.uniform(180.0, 280.0)
+        self.speed = random.uniform(180.0, 280.0) * difficulty
 
-    def update(self, screen_width: int = 800, screen_height: int = 600, dt: float = 1 / 60) -> None:
+    def update(self, screen_width: int = 800, screen_height: int = 600, dt: float = 1 / 60, difficulty: float = 1.0, magnet_target: tuple[float, float] | None = None) -> None:
         """Updates downward falling kinematics and frame animation."""
         assert self.rect is not None
         self.respawned_this_update = False
         # Kinematics
-        self.pos_y += self.speed * dt
+        if magnet_target:
+            tx, ty = magnet_target
+            cx, cy = self.rect.centerx, self.rect.centery
+            dir_x, dir_y = tx - cx, ty - cy
+            dist = (dir_x**2 + dir_y**2)**0.5
+            if dist > 0:
+                self.pos_y += (dir_y / dist) * 500 * dt
+                self.rect.x += int((dir_x / dist) * 500 * dt)
+        else:
+            self.pos_y += self.speed * dt
         self.rect.y = int(self.pos_y)
 
         # Animation
@@ -57,5 +66,5 @@ class CoinSprite(pygame.sprite.Sprite):
 
         # Screen loop
         if self.rect.top > screen_height:
-            self.reset(screen_width)
+            self.reset(screen_width, difficulty)
             self.respawned_this_update = True

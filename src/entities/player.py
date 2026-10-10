@@ -47,6 +47,7 @@ class Player(pygame.sprite.Sprite):
         self.combo = 0
         self.combo_timer = 0.0
         self.combo_window = PLAYER_COMBO_WINDOW
+        self.magnet_timer = 0.0
 
         self.image = self.frames[self.current_frame]
         self.rect = pygame.Rect(x, y, size[0], size[1])
@@ -82,6 +83,10 @@ class Player(pygame.sprite.Sprite):
         self.combo_timer = 0.0
         return True
 
+    def activate_magnet(self, duration: float) -> None:
+        """Activates the magnet power-up for the given duration."""
+        self.magnet_timer = duration
+
     def start_catch(self) -> None:
         """Starts the one-shot catch animation when frames are available."""
         if not self.catch_frames:
@@ -93,7 +98,7 @@ class Player(pygame.sprite.Sprite):
         current_img = self.catch_frames[self.current_frame]
         self.image = pygame.transform.flip(current_img, True, False) if not self.facing_right else current_img.copy()
 
-    def handle_input(self, screen_width : int, screen_height : int, dt: float = 1 / 60):
+    def handle_input(self, screen_width : int, screen_height : int, dt: float = 1 / 60, difficulty: float = 1.0):
         """Processes keyboard input for horizontal movement and locks vertical position."""
         assert self.rect is not None
         start_x = self.rect.x
@@ -108,7 +113,7 @@ class Player(pygame.sprite.Sprite):
             self.facing_right = True
 
         if move_direction != 0.0:
-            self.pos_x += self.speed * move_direction * dt
+            self.pos_x += self.speed * difficulty * move_direction * dt
             self.pos_x = max(0.0, min(self.pos_x, float(screen_width - self.rect.width)))
 
         self.rect.x = int(round(self.pos_x))
@@ -125,13 +130,16 @@ class Player(pygame.sprite.Sprite):
         # Fixed vertical axis (anchored 20px from bottom)
         self.rect.bottom = screen_height - self.bottom_offset
 
-    def update(self, screen_width : int = 800, screen_height : int = 600, dt: float = 1 / 60):
+    def update(self, screen_width : int = 800, screen_height : int = 600, dt: float = 1 / 60, difficulty: float = 1.0):
         """Updates player horizontal position, animation frame, and orientation."""
-        self.handle_input(screen_width, screen_height, dt)
+        self.handle_input(screen_width, screen_height, dt, difficulty)
         self.update_combo(dt)
 
         if self.invulnerability_timer > 0:
             self.invulnerability_timer = max(0.0, self.invulnerability_timer - dt)
+            
+        if self.magnet_timer > 0:
+            self.magnet_timer = max(0.0, self.magnet_timer - dt)
 
         self.animation_timer += dt
         catch_delay = self.animation_delay

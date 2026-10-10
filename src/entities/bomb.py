@@ -13,7 +13,7 @@ class BombSprite(pygame.sprite.Sprite):
         self.speed = speed
         self.respawned_this_update = False
 
-    def reset(self, screen_width: int) -> None:
+    def reset(self, screen_width: int, difficulty: float = 1.0) -> None:
         """Respawns the bomb above the screen at a randomized horizontal position."""
         assert self.rect is not None
         rect_height = int(self.rect.height)
@@ -21,7 +21,7 @@ class BombSprite(pygame.sprite.Sprite):
         max_x = max(10, screen_width - int(self.rect.width) - 10)
         self.rect.x = random.randint(10, max_x)
         self.rect.y = int(self.pos_y)
-        self.speed = random.uniform(180.0, 260.0)
+        self.speed = random.uniform(180.0, 260.0) * difficulty
 
     def update(self, screen_width: int, screen_height: int, dt: float = 1 / 60) -> None:
         """Moves the bomb down and removes it after leaving the playable area."""
