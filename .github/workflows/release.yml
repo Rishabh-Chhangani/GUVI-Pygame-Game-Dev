@@ -1,6 +1,7 @@
 name: Publish Release
 
-# This workflow ONLY triggers when you push a version tag (e.g., v1.0.0)
+# Manual version-tag pushes also publish a release. Pushes to main are versioned
+# and released by the CI workflow after its checks and Windows build succeed.
 on:
   push:
     tags:

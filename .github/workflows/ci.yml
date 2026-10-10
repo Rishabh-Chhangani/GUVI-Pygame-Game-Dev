@@ -85,3 +85,60 @@ jobs:
         with:
           name: NinjaCollector-Windows-Build
           path: dist/NinjaCollector/
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build-windows
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository and tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create next patch tag
+        id: version
+        shell: bash
+        run: |
+          for attempt in {1..5}; do
+            tags=$(git ls-remote --tags --refs origin 'refs/tags/v*' | cut -f2 | sed 's#refs/tags/##')
+            latest_tag=$(printf '%s\n' "$tags" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+            version="${latest_tag#v}"
+            if [[ -z "$latest_tag" ]]; then
+              version="0.0.0"
+            fi
+            IFS='.' read -r major minor patch <<< "$version"
+            next_tag="v${major}.${minor}.$((patch + 1))"
+
+            if git push origin "${GITHUB_SHA}:refs/tags/${next_tag}"; then
+              echo "tag=$next_tag" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Tag $next_tag could not be created; retrying ($attempt/5)." >&2
+            sleep 1
+          done
+
+          echo "Failed to create a unique patch tag after 5 attempts." >&2
+          exit 1
+
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: NinjaCollector-Windows-Build
+          path: release-files
+
+      - name: Package Windows build
+        run: |
+          cd release-files
+          zip -r ../NinjaCollector-Windows.zip .
+
+      - name: Create version tag and GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: NinjaCollector-Windows.zip
+          generate_release_notes: true

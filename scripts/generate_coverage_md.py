@@ -1,18 +1,19 @@
-import json
-import xml.etree.ElementTree as ET
 import csv
-import sys
+import json
 import subprocess
+import sys
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
+
 
 def get_git_commit():
     try:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
-    except Exception:
+    except (OSError, subprocess.CalledProcessError):
         return "unknown"
 
-def parse_junit_xml(xml_path):
+def parse_junit_xml(xml_path: str | Path) -> tuple[int, int, int, int]:
     tree = ET.parse(xml_path)
     root = tree.getroot()
     
@@ -80,23 +81,23 @@ def main():
         else:
             coverage_trend = "(No change) [-]"
 
-    md_content = f"# Test Coverage Report\n\n"
+    md_content = "# Test Coverage Report\n\n"
     md_content += f"**Generated:** {timestamp_str} | **Commit:** `{commit_hash}`\n\n"
 
-    md_content += f"## Test Summary\n\n"
+    md_content += "## Test Summary\n\n"
     md_content += f"- **Total Tests:** {total_tests}\n"
     md_content += f"- **Passed:** {passed_tests}\n"
     md_content += f"- **Failed:** {failed_tests}\n"
     md_content += f"- **Skipped:** {skipped_tests}\n\n"
 
-    md_content += f"## Coverage Summary\n\n"
+    md_content += "## Coverage Summary\n\n"
     md_content += f"- **Overall Coverage:** {percent_covered:.2f}% {coverage_trend}\n"
     md_content += f"- **Covered Statements:** {covered_lines} / {num_statements}\n"
     md_content += f"- **Missed Statements:** {missing_lines}\n\n"
 
-    md_content += f"## Module Breakdown\n\n"
-    md_content += f"| Module | Coverage | Missed Lines |\n"
-    md_content += f"|--------|----------|--------------|\n"
+    md_content += "## Module Breakdown\n\n"
+    md_content += "| Module | Coverage | Missed Lines |\n"
+    md_content += "|--------|----------|--------------|\n"
     
     files = cov_data.get("files", {})
     for filename, file_data in sorted(files.items()):
@@ -114,9 +115,9 @@ def main():
             reader = csv.reader(f)
             history_rows = list(reader)
             if len(history_rows) > 1:
-                md_content += f"\n## Recent History\n\n"
-                md_content += f"| Timestamp | Commit | Tests | Passed | Coverage |\n"
-                md_content += f"|-----------|--------|-------|--------|----------|\n"
+                md_content += "\n## Recent History\n\n"
+                md_content += "| Timestamp | Commit | Tests | Passed | Coverage |\n"
+                md_content += "|-----------|--------|-------|--------|----------|\n"
                 for row in history_rows[-5:]: # last 5 entries
                     if row[0] == "Timestamp": continue # skip header
                     md_content += f"| {row[0]} | `{row[1]}` | {row[2]} | {row[3]} | {row[6]}% |\n"
