@@ -32,3 +32,14 @@ def test_reset_clears_persisted_scores_and_history(tmp_path: Path) -> None:
     assert manager.high_score == 0
     assert manager.run_history == []
     assert not manager.highscore_file.exists()
+
+
+def test_corrupted_json_loads_with_default_data(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "highscores.json").write_text("{ invalid json", encoding="utf-8")
+
+    manager = DataManager(data_dir)
+
+    assert manager.high_score == 0
+    assert manager.run_history == []

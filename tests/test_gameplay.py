@@ -6,9 +6,34 @@ import pytest
 from src import config
 from src.game import Game
 from src.scenes.base import BaseScene
+from src.scenes.manager import SceneManager
 from src.scenes.menu import MenuScene
 from src.scenes.pause import PauseScene
 from src.scenes.play import PlayScene
+
+
+class RecordingSpawner:
+    def __init__(self) -> None:
+        self.bombs_spawned = 0
+        self.stars_spawned = 0
+        self.magnets_spawned = 0
+
+    def spawn_bomb(self, _width: int, difficulty: float) -> None:
+        del _width, difficulty
+        self.bombs_spawned += 1
+
+    def spawn_star(self, _width: int, difficulty: float) -> None:
+        del _width, difficulty
+        self.stars_spawned += 1
+
+    def spawn_magnet(self, _width: int, difficulty: float) -> None:
+        del _width, difficulty
+        self.magnets_spawned += 1
+
+
+class DummyWindow:
+    def get_size(self) -> tuple[int, int]:
+        return (800, 600)
 
 
 class DummyPlayer(pygame.sprite.Sprite):
@@ -201,6 +226,7 @@ def test_bomb_collision_damages_player_and_respects_invulnerability(game: Any) -
     assert game.player.health == 100 - config.BOMB_DAMAGE
     assert bomb not in game.bombs_group
     assert game.camera_shake == 15.0
+    assert "hit" in game.audio_manager.played
 
     protected_bomb = DummyItem()
     game.bombs_group.add(protected_bomb)
@@ -256,3 +282,90 @@ def test_menu_play_and_pause_scene_events_switch_states(
         pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)
     )
     assert game.state == "PLAYING"
+
+
+def test_bomb_spawns_exactly_at_configured_coin_threshold(game: Any) -> None:
+    game.spawner = RecordingSpawner()
+
+    for _ in range(config.COINS_PER_BOMB - 1):
+        game._register_coin_drop()
+    assert game.spawner.bombs_spawned == 0
+
+    game._register_coin_drop()
+
+    assert game.spawner.bombs_spawned == 1
+    assert game.coins_since_bomb == 0
+
+
+def test_star_spawns_at_configured_coin_threshold(game: Any) -> None:
+    game.spawner = RecordingSpawner()
+
+    for _ in range(config.COINS_PER_STAR - 1):
+        game._register_coin_drop()
+    assert game.spawner.stars_spawned == 0
+
+    game._register_coin_drop()
+
+    assert game.spawner.stars_spawned == 1
+    assert game.coins_since_star == 0
+
+
+def test_pause_scene_does_not_update_gameplay(game: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    game.window = DummyWindow()
+    pause_scene = PauseScene(game)
+    game.scene_manager = SceneManager(pause_scene)
+
+    player_update_calls: list[tuple[int, int, float, float]] = []
+
+    def record_player_update(
+        screen_width: int,
+        screen_height: int,
+        dt: float,
+        difficulty: float,
+    ) -> None:
+        player_update_calls.append((screen_width, screen_height, dt, difficulty))
+
+    monkeypatch.setattr(game.player, "update", record_player_update)
+    bomb = DummyItem()
+    game.bombs_group.add(bomb)
+    bomb_update_calls: list[tuple[int, int, float]] = []
+
+    def record_bomb_update(
+        screen_width: int,
+        screen_height: int,
+        dt: float,
+    ) -> None:
+        bomb_update_calls.append((screen_width, screen_height, dt))
+
+    monkeypatch.setattr(bomb, "update", record_bomb_update)
+
+    game.update(dt=0.5)
+
+    assert player_update_calls == []
+    assert bomb_update_calls == []
+
+
+def test_clicking_start_button_calls_game_start(game: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    game.play_button_rect = pygame.Rect(100, 100, 80, 40)
+    game.state = "MENU"
+    monkeypatch.setattr(
+        game,
+        "start_game_play",
+        lambda: setattr(game, "state", "PLAYING"),
+    )
+
+    game.handle_menu_click(game.play_button_rect.center)
+
+    assert game.state == "PLAYING"
+
+
+def test_clicking_options_button_opens_options_state(game: Any) -> None:
+    game.resume_button_rect = pygame.Rect(0, 0, 10, 10)
+    game.restart_button_rect = pygame.Rect(20, 0, 10, 10)
+    game.options_button_rect = pygame.Rect(100, 100, 80, 40)
+    game.state = "PAUSED"
+
+    game.handle_pause_click(game.options_button_rect.center)
+
+    assert game.state == "OPTIONS"
+    assert "click" in game.audio_manager.played

@@ -28,7 +28,7 @@ This project is built using a complete, professional-grade Continuous Integratio
 *   **Automated Testing:** Core game logic and collision math are heavily unit-tested via `pytest` without requiring a graphical window.
 *   **Automated Releases:** Pushing a `v*.*.*` tag automatically triggers a pipeline that uses `PyInstaller` to bundle the game into a standalone `.exe` and publishes it to GitHub Releases.
 
-*Read more about our technical choices and problem-solving in the [Developer Journal](docs/DEVELOPER_JOURNAL.md), or see the [Pipeline Recovery Guide](docs/pipeline-recovery.md) and [DevOps Plan](docs/Devops-Plan.md).*
+*Read more about our technical choices and problem-solving in the [Developer Journal](docs/DEVELOPER_JOURNAL.md). For DevOps architecture, see the [DevOps Plan](docs/Devops-Plan.md), [Pipeline Recovery Guide](docs/pipeline-recovery.md), and our [Headless Testing Strategy](docs/HEADLESS_TESTING_GUIDE.md).*
 
 ## 💻 Local Development Setup
 
