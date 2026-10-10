@@ -7,12 +7,19 @@ __pycache__/
 src/entities/__pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.ruff_cache/
 
 # Python packaging/build artifacts
 build/
 dist/
 *.egg-info/
 .eggs/
+*.spec
+
+#Game Data
+data/
+*.json
 
 # ==============================
 # Virtual environments
