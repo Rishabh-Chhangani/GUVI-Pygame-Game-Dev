@@ -332,9 +332,11 @@ class Game:
         """Handles pause menu button interactions."""
         if self.resume_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
+            self.audio_manager.unpause_bgm()
             self.state = "PLAYING"
         elif self.restart_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
+            self.audio_manager.unpause_bgm()
             self.restart_playing_session()
         elif self.options_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
