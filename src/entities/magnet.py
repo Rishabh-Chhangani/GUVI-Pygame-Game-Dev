@@ -1,5 +1,5 @@
-import random
 import pygame
+
 
 class MagnetSprite(pygame.sprite.Sprite):
     """Falling magnet power-up."""
@@ -15,6 +15,7 @@ class MagnetSprite(pygame.sprite.Sprite):
     def update(self, screen_width: int, screen_height: int, dt: float = 1 / 60, difficulty: float = 1.0) -> None:
         """Moves the magnet down and removes it after leaving the playable area."""
         assert self.rect is not None
+        del screen_width
         self.respawned_this_update = False
         self.pos_y += self.speed * difficulty * dt
         self.rect.y = int(self.pos_y)

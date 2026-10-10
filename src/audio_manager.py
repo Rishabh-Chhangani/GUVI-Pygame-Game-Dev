@@ -1,6 +1,7 @@
-import pygame
 from pathlib import Path
 from typing import Any
+
+import pygame
 
 
 class AudioManager:

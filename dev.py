@@ -2,9 +2,9 @@
 Ninja Collector - Development Auto-Reloader
 Watches project files and automatically restarts the game on save.
 """
+import subprocess
 import sys
 import time
-import subprocess
 from pathlib import Path
 
 # File extensions to watch for modifications

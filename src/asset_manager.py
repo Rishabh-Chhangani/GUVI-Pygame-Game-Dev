@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import cast
 
 import pygame
+
 from src.config import ASSETS_DIR
 
 

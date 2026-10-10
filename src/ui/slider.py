@@ -1,5 +1,6 @@
 import pygame
 
+
 class Slider:
     def __init__(self, x: int, y: int, width: int, track_img: pygame.Surface, thumb_img: pygame.Surface, initial_value: float = 1.0):
         self.rect = pygame.Rect(x, y, width, track_img.get_height())
@@ -24,11 +25,17 @@ class Slider:
         
     def handle_event(self, event: pygame.event.Event) -> bool:
         """Returns True if value changed."""
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.thumb_rect.collidepoint(event.pos) or self.rect.collidepoint(event.pos):
-                self.is_dragging = True
-                self._update_value_from_mouse(event.pos[0])
-                return True
+        if (
+            event.type == pygame.MOUSEBUTTONDOWN
+            and event.button == 1
+            and (
+                self.thumb_rect.collidepoint(event.pos)
+                or self.rect.collidepoint(event.pos)
+            )
+        ):
+            self.is_dragging = True
+            self._update_value_from_mouse(event.pos[0])
+            return True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self.is_dragging:
                 self.is_dragging = False

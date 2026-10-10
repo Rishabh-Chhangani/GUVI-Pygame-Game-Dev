@@ -1,4 +1,5 @@
 import random
+
 import pygame
 
 
@@ -26,6 +27,7 @@ class BombSprite(pygame.sprite.Sprite):
     def update(self, screen_width: int, screen_height: int, dt: float = 1 / 60) -> None:
         """Moves the bomb down and removes it after leaving the playable area."""
         assert self.rect is not None
+        del screen_width
         self.respawned_this_update = False
         self.pos_y += self.speed * dt
         self.rect.y = int(self.pos_y)

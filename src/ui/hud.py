@@ -1,6 +1,8 @@
 import pygame
+
 from src import config
 from src.ui.juice import UIHealthBar
+
 
 class HUD:
     """Render score, health, and the player status bar."""

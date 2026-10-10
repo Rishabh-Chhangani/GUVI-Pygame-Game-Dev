@@ -1,5 +1,5 @@
 """Entities package for Ninja Collector."""
-from src.entities.player import Player
 from src.entities.coin import CoinSprite
+from src.entities.player import Player
 
-__all__ = ["Player", "CoinSprite"]
+__all__ = ["CoinSprite", "Player"]

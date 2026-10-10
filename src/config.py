@@ -2,13 +2,11 @@ import sys
 from pathlib import Path
 
 # Paths
-if getattr(sys, 'frozen', False):
-    # Running as PyInstaller executable
-    ROOT_DIR = Path(sys._MEIPASS)
-else:
-    # Running from source
-    SRC_DIR = Path(__file__).resolve().parent
-    ROOT_DIR = SRC_DIR.parent
+ROOT_DIR = (
+    Path(vars(sys)["_MEIPASS"])
+    if getattr(sys, "frozen", False)
+    else Path(__file__).resolve().parent.parent
+)
 
 ASSETS_DIR = ROOT_DIR / "assets"
 USER_DATA_DIR = Path.home() / ".ninja_collector"

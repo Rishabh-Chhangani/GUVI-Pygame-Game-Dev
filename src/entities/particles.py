@@ -1,6 +1,8 @@
-import random
 import math
+import random
+
 import pygame
+
 
 class Particle:
     """A single particle for visual effects."""

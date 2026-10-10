@@ -1,5 +1,7 @@
 import random
+
 import pygame
+
 from src.config import COIN_ANIMATION_DELAY, COIN_VALUE
 
 

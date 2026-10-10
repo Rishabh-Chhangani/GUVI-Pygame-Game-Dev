@@ -1,5 +1,7 @@
-import pygame
 import random
+
+import pygame
+
 
 class UIHealthBar:
     def __init__(self, max_health: int):

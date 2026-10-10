@@ -1,12 +1,13 @@
 import pygame
+
 from src.config import (
-    PLAYER_SPEED,
     PLAYER_ANIMATION_DELAY,
-    PLAYER_SIZE,
     PLAYER_BOTTOM_OFFSET,
-    PLAYER_MAX_HEALTH,
-    PLAYER_INVULNERABILITY_DURATION,
     PLAYER_COMBO_WINDOW,
+    PLAYER_INVULNERABILITY_DURATION,
+    PLAYER_MAX_HEALTH,
+    PLAYER_SIZE,
+    PLAYER_SPEED,
 )
 
 
@@ -116,7 +117,7 @@ class Player(pygame.sprite.Sprite):
             self.pos_x += self.speed * difficulty * move_direction * dt
             self.pos_x = max(0.0, min(self.pos_x, float(screen_width - self.rect.width)))
 
-        self.rect.x = int(round(self.pos_x))
+        self.rect.x = round(self.pos_x)
 
         if self.rect.left < 0:
             self.rect.left = 0

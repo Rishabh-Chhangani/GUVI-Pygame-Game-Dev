@@ -3,18 +3,19 @@ import random
 
 import pygame
 
-import src.config as config
+import src.entities.bomb as bomb_module
+import src.entities.coin as coin_module
+import src.entities.player as player_module
+import src.entities.star as star_module
+from src import config
 from src.asset_manager import AssetManager
+from src.audio_manager import AudioManager
+from src.data_manager import DataManager
+from src.entities.particles import ParticleSystem
 from src.entities.spawner import Spawner
+from src.scenes.base import BaseScene
 from src.ui.hud import HUD
 from src.ui.juice import DamagePopup
-from src.data_manager import DataManager
-from src.audio_manager import AudioManager
-from src.entities.particles import ParticleSystem
-import src.entities.player as player_module
-import src.entities.coin as coin_module
-import src.entities.bomb as bomb_module
-import src.entities.star as star_module
 
 
 class Game:
@@ -46,7 +47,7 @@ class Game:
         # Timing
         self.clock = pygame.time.Clock()
         self.running = True
-        self._state = "MENU"
+        self._state: str = "MENU"
         self.score = 0
         self.coin_drop_count = 0
         self.bomb_drop_count = 0
@@ -69,15 +70,15 @@ class Game:
         self.camera_shake = 0.0
         self.high_score = self.data_manager.high_score
 
+        from src.scenes.game_over import GameOverScene
+        from src.scenes.leaderboard import LeaderboardScene
         from src.scenes.manager import SceneManager
         from src.scenes.menu import MenuScene
-        from src.scenes.play import PlayScene
-        from src.scenes.pause import PauseScene
-        from src.scenes.game_over import GameOverScene
         from src.scenes.options import OptionsScene
-        from src.scenes.leaderboard import LeaderboardScene
+        from src.scenes.pause import PauseScene
+        from src.scenes.play import PlayScene
 
-        self.scenes = {
+        self.scenes: dict[str, BaseScene] = {
             "MENU": MenuScene(self),
             "PLAYING": PlayScene(self),
             "PAUSED": PauseScene(self),
@@ -197,11 +198,11 @@ class Game:
         self.particle_system.particles.clear()
 
     @property
-    def state(self):
+    def state(self) -> str:
         return self._state
 
     @state.setter
-    def state(self, new_state):
+    def state(self, new_state: str) -> None:
         self._state = new_state
         if hasattr(self, 'scene_manager') and new_state in self.scenes:
             self.scene_manager.switch_to(self.scenes[new_state])
@@ -267,7 +268,7 @@ class Game:
             # Re-initialize entities with fresh values
             self._init_entities()
             print("[⚡ HOT-RELOAD] Config, assets, and entities reloaded successfully!")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"[HOT-RELOAD ERROR] Could not reload game state: {e}")
 
     def _layout_menu_buttons(self):
@@ -315,11 +316,11 @@ class Game:
         self.game_over_restart_button_rect.center = (self.width // 2, self.height // 2 + 100)
         self.game_over_menu_button_rect.center = (self.width // 2, self.height // 2 + 100 + config.MENU_BUTTON_HEIGHT + config.MENU_BUTTON_SPACING)
 
-    def _handle_menu_click(self, mouse_pos: tuple[int, int]) -> None:
+    def handle_menu_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles main menu button interactions."""
         if self.play_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
-            self._start_game_play()
+            self.start_game_play()
         elif self.leaderboard_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
             self.state = "LEADERBOARD"
@@ -327,19 +328,19 @@ class Game:
             self.audio_manager.play_sfx("click")
             self.running = False
 
-    def _handle_pause_click(self, mouse_pos: tuple[int, int]) -> None:
+    def handle_pause_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles pause menu button interactions."""
         if self.resume_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
             self.state = "PLAYING"
         elif self.restart_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
-            self._restart_playing_session()
+            self.restart_playing_session()
         elif self.options_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
             self.state = "OPTIONS"
 
-    def _handle_options_click(self, mouse_pos: tuple[int, int]) -> None:
+    def handle_options_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles options screen button interactions."""
         if self.back_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
@@ -349,7 +350,7 @@ class Game:
             self.data_manager.reset_data()
             self.high_score = 0
 
-    def _handle_leaderboard_click(self, mouse_pos: tuple[int, int]) -> None:
+    def handle_leaderboard_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles leaderboard screen button interactions."""
         if self.leaderboard_back_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
@@ -359,16 +360,16 @@ class Game:
             self.data_manager.reset_data()
             self.high_score = 0
 
-    def _handle_game_over_click(self, mouse_pos: tuple[int, int]) -> None:
+    def handle_game_over_click(self, mouse_pos: tuple[int, int]) -> None:
         """Handles game-over screen button interactions."""
         if self.game_over_restart_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
-            self._restart_playing_session()
+            self.restart_playing_session()
         elif self.game_over_menu_button_rect.collidepoint(mouse_pos):
             self.audio_manager.play_sfx("click")
             self._return_to_menu()
 
-    def _start_game_play(self):
+    def start_game_play(self):
         """Resets gameplay and enters the PLAYING state."""
         self.score = 0
         self.coin_drop_count = 0
@@ -382,7 +383,7 @@ class Game:
         self.state = "PLAYING"
         self._init_entities()
 
-    def _restart_playing_session(self):
+    def restart_playing_session(self):
         """Reinitializes the current session and starts playing immediately."""
         self.score = 0
         self.coin_drop_count = 0
@@ -449,7 +450,7 @@ class Game:
         if hasattr(self, 'scene_manager'):
             self.scene_manager.update(dt)
 
-    def _update_playing(self, dt: float):
+    def update_playing(self, dt: float):
 
         if self.player.health <= 0:
             self.state = "GAME_OVER"
@@ -539,7 +540,7 @@ class Game:
                     self.high_score = self.score
                 break
 
-    def _draw_main_menu(self):
+    def draw_main_menu(self):
         """Draws the main menu screen."""
         self.window.fill(config.MENU_BACKGROUND_COLOR)
 
@@ -564,7 +565,7 @@ class Game:
         self.window.blit(leaderboard_label, leaderboard_label.get_rect(center=self.leaderboard_button_rect.center))
         self.window.blit(quit_label, quit_label.get_rect(center=self.quit_button_rect.center))
 
-    def _draw_pause_menu(self):
+    def draw_pause_menu(self):
         """Draws the pause overlay and available actions."""
         offset_x, offset_y = 0, 0
         if self.camera_shake > 0:
@@ -597,7 +598,7 @@ class Game:
         self.window.blit(restart_label, restart_label.get_rect(center=self.restart_button_rect.center))
         self.window.blit(options_label, options_label.get_rect(center=self.options_button_rect.center))
 
-    def _draw_options_menu(self):
+    def draw_options_menu(self):
         """Draws the options screen."""
         offset_x, offset_y = 0, 0
         if self.camera_shake > 0:
@@ -637,7 +638,7 @@ class Game:
         self.window.blit(reset_label, reset_label.get_rect(center=self.option_reset_button_rect.center))
         self.window.blit(back_label, back_label.get_rect(center=self.back_button_rect.center))
 
-    def _draw_leaderboard_menu(self):
+    def draw_leaderboard_menu(self):
         """Draws the leaderboard screen with run history."""
         self.window.fill(config.MENU_BACKGROUND_COLOR)
         
@@ -679,7 +680,7 @@ class Game:
             self.scene_manager.draw(self.window)
         pygame.display.update()
 
-    def _draw_playing(self):
+    def draw_playing(self):
         offset_x, offset_y = 0, 0
         if self.camera_shake > 0:
             offset_x = random.uniform(-self.camera_shake, self.camera_shake)
@@ -697,8 +698,8 @@ class Game:
         for popup in self.popups:
             popup.draw(self.window)
 
-    def _draw_game_over(self):
-        self._draw_playing()
+    def draw_game_over(self):
+        self.draw_playing()
         game_over_surface = self.game_over_font.render("GAME OVER", True, config.GAME_OVER_COLOR)
         game_over_rect = game_over_surface.get_rect(center=(self.width // 2, self.height // 2 - 60))
         self.window.blit(game_over_surface, game_over_rect)

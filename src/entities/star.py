@@ -1,4 +1,5 @@
 import random
+
 import pygame
 
 
@@ -27,6 +28,7 @@ class StarSprite(pygame.sprite.Sprite):
     def update(self, screen_width: int = 800, screen_height: int = 600, dt: float = 1 / 60) -> None:
         """Moves the star downward and removes it when out of bounds."""
         assert self.rect is not None
+        del screen_width
         self.respawned_this_update = False
         self.pos_y += self.speed * dt
         self.rect.y = int(self.pos_y)

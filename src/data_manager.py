@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+
 class DataManager:
     """Handles persistence of high scores and other game data."""
     def __init__(self, data_dir: str | Path = "data"):
@@ -9,7 +10,7 @@ class DataManager:
         self.highscore_file = self.data_dir / "highscores.json"
         
         # Load or initialize data
-        self.run_history = []
+        self.run_history: list[dict[str, int | float]] = []
         self.high_score = 0
         self.load_data()
         
@@ -20,7 +21,7 @@ class DataManager:
                     data = json.load(f)
                     self.high_score = data.get("high_score", 0)
                     self.run_history = data.get("run_history", [])
-            except (json.JSONDecodeError, IOError):
+            except (json.JSONDecodeError, OSError):
                 pass
         
     def save_run(self, score: int, time_survived: float) -> bool:
@@ -38,7 +39,7 @@ class DataManager:
                     "high_score": self.high_score,
                     "run_history": self.run_history
                 }, f)
-        except IOError:
+        except OSError:
             pass
             
         return is_new_high_score
@@ -50,5 +51,5 @@ class DataManager:
         if self.highscore_file.exists():
             try:
                 self.highscore_file.unlink()
-            except IOError:
+            except OSError:
                 pass

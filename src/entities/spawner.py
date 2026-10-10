@@ -5,6 +5,7 @@ import pygame
 from src import config
 from src.entities.bomb import BombSprite
 from src.entities.coin import CoinSprite
+from src.entities.magnet import MagnetSprite
 from src.entities.star import StarSprite
 
 
@@ -19,7 +20,7 @@ class Spawner:
         coin_frames: list[pygame.Surface],
         bomb_image: pygame.Surface,
         star_image: pygame.Surface,
-        magnet_group: pygame.sprite.Group | None = None,
+        magnet_group: pygame.sprite.Group[MagnetSprite] | None = None,
         magnet_image: pygame.Surface | None = None,
     ):
         self.coin_group = coin_group
@@ -66,8 +67,12 @@ class Spawner:
         self.star_group.add(star)
         return star
 
-    def spawn_magnet(self, screen_width: int, screen_height: int | None = None, difficulty: float = 1.0):
-        from src.entities.magnet import MagnetSprite
+    def spawn_magnet(
+        self,
+        screen_width: int,
+        screen_height: int | None = None,
+        difficulty: float = 1.0,
+    ) -> MagnetSprite | None:
         del screen_height
         spawn_x = random.randint(30, max(30, screen_width - config.MAGNET_SIZE[0] - 30))
         spawn_y = -random.randint(50, 400)

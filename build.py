@@ -1,6 +1,6 @@
-import os
 import subprocess
 import sys
+
 
 def main():
     print("Building Ninja Collector executable...")
