@@ -5,7 +5,7 @@ Based on the `pygame-core` skill guidelines and a review of the game's source co
 ## 1. Architectural Defect: Missing Delta-Time (`dt`) Implementation
 **Severity: Critical**
 
-The `pygame-core` skills document explicitly states: *"Speed differs on faster machines → you moved by a fixed amount per frame. Scale by dt = clock.tick(fps) / 1000 and use pixels-per-second values."*
+The `pygame-core` skills document explicitly states: *"Speed differs on faster machines — you moved by a fixed amount per frame. Scale by dt = clock.tick(fps) / 1000 and use pixels-per-second values."*
 
 In `src/game.py`, the main loop calls `self.clock.tick(config.FPS)` but entirely discards the returned delta time (`dt`). Instead, entities move by a fixed amount of pixels per frame (`self.pos_y += self.speed` in `coin.py`, `bomb.py`, `star.py`, and `self.rect.x += self.speed` in `player.py`). 
 
@@ -23,7 +23,7 @@ However, in `src/entities/bomb.py` and `src/entities/star.py`, when these entiti
 ## 3. Architectural Defect: Sub-pixel Precision Loss (Player Movement)
 **Severity: Medium**
 
-The `pygame-core` skill warns: *"Sub-pixel movement snaps/jitters → rect coordinates are integers; store the true position as a Vector2 of floats..."*
+The `pygame-core` skill warns: *"Sub-pixel movement snaps/jitters — rect coordinates are integers; store the true position as a Vector2 of floats..."*
 
 In `src/entities/player.py`, the player's position is strictly updated using the integer bounds of `self.rect` (`self.rect.x -= self.speed`). If we were to fix the delta-time issue (as mentioned in point #1), the player's speed would frequently result in fractional movement (e.g., `4.5` pixels). Because `rect.x` only stores integers, these fractions are truncated, causing jittery movement and inaccurate speeds.
 
