@@ -18,8 +18,8 @@ DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 600
 FPS = 60
 CAPTION = "Ninja Collector"
-ICON_FILE = "coin1.png"
-BG_IMAGE_FILE = "bg1.png"
+ICON_FILE = "sprites/items/coin1.png"
+BG_IMAGE_FILE = "images/bg1.png"
 
 # Player Settings
 PLAYER_SIZE = (79, 82)  # display widhth and height in pixels
@@ -29,41 +29,41 @@ PLAYER_ANIMATION_DELAY = 0.1  # seconds
 PLAYER_INVULNERABILITY_DURATION = 1.2  # seconds
 PLAYER_COMBO_WINDOW = 2.5  # seconds before combo resets
 PLAYER_FRAME_NAMES = [
-    "idle_anim/idle1.png",
-    "idle_anim/idle2.png",
-    "idle_anim/idle3.png",
-    "idle_anim/idle4.png",
-    "idle_anim/idle5.png"
+    "sprites/player/idle_anim/idle1.png",
+    "sprites/player/idle_anim/idle2.png",
+    "sprites/player/idle_anim/idle3.png",
+    "sprites/player/idle_anim/idle4.png",
+    "sprites/player/idle_anim/idle5.png"
 ]
 PLAYER_RUN_FRAME_NAMES = [
-    f"Runing/Run{i}.png" for i in range(1, 7)
+    f"sprites/player/Runing/Run{i}.png" for i in range(1, 7)
 ]
 PLAYER_CATCH_FRAME_NAMES = [
-    f"Catch/Catch{i}.png" for i in range(1, 4)
+    f"sprites/player/Catch/Catch{i}.png" for i in range(1, 4)
 ]
 
 # Coin Settings
 COIN_SIZE = (32,32) # display width and height in pixels 
-COIN_FRAME_NAMES = [f"coin{i}.png" for i in range(1, 8)]
+COIN_FRAME_NAMES = [f"sprites/items/coin{i}.png" for i in range(1, 8)]
 COIN_ANIMATION_DELAY = 0.125  # seconds for smooth natural rotation
 COIN_COUNT = 2  # Number of concurrent falling coins
 
 # Bomb Settings
-BOMB_IMAGE_FILE = "bomb.png"
+BOMB_IMAGE_FILE = "sprites/items/bomb.png"
 BOMB_SIZE = (32, 32)
 BOMB_DAMAGE = 25
 STAR_DAMAGE = 25
 COINS_PER_BOMB = 7
 
 # Star Settings
-STAR_IMAGE_FILE = "star1.png"
+STAR_IMAGE_FILE = "sprites/items/star1.png"
 STAR_SIZE = (32, 32)
 STAR_VALUE = 10
 COINS_PER_STAR = 10
 COIN_VALUE = 1
 
 # Magnet Settings
-MAGNET_IMAGE_FILE = "magnet.png" # Need this asset!
+MAGNET_IMAGE_FILE = "sprites/items/magnet.png"
 MAGNET_SIZE = (32, 32)
 COINS_PER_MAGNET = 20
 MAGNET_DURATION = 5.0 # seconds
@@ -74,7 +74,7 @@ PLAYER_MAX_HEALTH = 100
 # HUD Settings
 SCORE_FONT_SIZE = 28
 GAME_OVER_FONT_SIZE = 64
-FONT_FILE: str | None = None
+FONT_FILE = ASSETS_DIR / "UI" / "Font" / "kenvector_future.ttf"
 HUD_COLOR = (255, 255, 255)
 GAME_OVER_COLOR = (255, 70, 70)
 SCORE_POSITION = (20, 20)
