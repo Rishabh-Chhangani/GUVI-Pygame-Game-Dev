@@ -37,6 +37,24 @@ jobs:
       - name: Run pip-audit
         run: pip-audit
 
+      # Step 6: Run tests and generate coverage
+      - name: Run Tests and Generate Coverage
+        run: |
+          mkdir -p reports
+          python -m pytest --cov=src --cov-report=term-missing --cov-report=json:reports/coverage.json --junitxml=reports/junit.xml
+          python scripts/generate_coverage_md.py
+
+      # Step 7: Upload Coverage Reports
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            reports/coverage.md
+            reports/coverage.json
+            reports/junit.xml
+
   build-windows:
     runs-on: windows-latest
     needs: build-and-test # This ensures we only build if the code passes tests/linting!

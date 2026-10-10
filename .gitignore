@@ -63,3 +63,19 @@ Desktop.ini
 
 # Local ZIP/archive of the project
 *.zip
+
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# Keep historical coverage data
+!reports/
+reports/*
+!reports/coverage_history.csv
+
+# Generated test reports
+reports/coverage.md
+reports/coverage.json
+reports/junit.xml

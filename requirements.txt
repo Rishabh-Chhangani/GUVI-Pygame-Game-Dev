@@ -1,5 +1,6 @@
 pygame-ce==2.5.8
 pytest
+pytest-cov
 ruff
 pip-audit
 pyinstaller
